@@ -11,6 +11,11 @@ class ProductImageSerializer(serializers.ModelSerializer):
     
     def get_image_url(self, obj):
         return obj.image_url
+    
+    def to_representation(self, instance):
+        if instance is None:
+            return None
+        return super().to_representation(instance)
 
 class ProductVariantSerializer(serializers.ModelSerializer):
     is_in_stock = serializers.BooleanField(read_only=True)
@@ -22,7 +27,7 @@ class ProductVariantSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductVariant
         fields = [
-            'id', 'title', 'sku', 'barcode', 'price', 'compare_at_price', 'cost_per_item',
+            'id', 'title', 'sku', 'barcode', 'price', 'old_price',
             'quantity', 'track_quantity', 'allow_backorder', 'weight', 'weight_unit',
             'option1_name', 'option1_value', 'option2_name', 'option2_value',
             'option3_name', 'option3_value', 'position', 'is_active',
@@ -48,7 +53,8 @@ class ProductListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'slug', 'description', 'short_description',
             'category', 'category_name', 'subcategory', 'subcategory_name',
-            'product_type', 'status', 'price', 'compare_at_price',
+            'product_type', 'status', 'price', 'old_price',
+            'option1_name', 'option2_name', 'option3_name',
             'min_price', 'max_price', 'total_inventory', 'is_in_stock', 'is_variable',
             'featured', 'tags', 'primary_image', 'variant_count',
             'created_at', 'updated_at', 'published_at'
@@ -90,8 +96,8 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             'id', 'title', 'slug', 'description', 'short_description',
             'meta_title', 'meta_description', 'category', 'category_name',
             'subcategory', 'subcategory_name', 'product_type', 'status',
-            'price', 'compare_at_price', 'cost_per_item', 'track_quantity',
-            'quantity', 'allow_backorder', 'quantity_policy', 'weight',
+            'price', 'old_price', 'option1_name', 'option2_name', 'option3_name',
+            'track_quantity', 'quantity', 'allow_backorder', 'quantity_policy', 'weight',
             'weight_unit', 'requires_shipping', 'taxable', 'featured',
             'tags', 'min_price', 'max_price', 'total_inventory', 'is_in_stock',
             'is_variable', 'images', 'variants', 'created_at', 'updated_at',
@@ -113,8 +119,9 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
         model = Product
         fields = [
             'title', 'description', 'short_description', 'meta_title', 'meta_description',
-            'category', 'subcategory', 'product_type', 'status', 'price', 'compare_at_price',
-            'cost_per_item', 'track_quantity', 'quantity', 'allow_backorder',
+            'category', 'subcategory', 'product_type', 'status', 'price', 'old_price',
+            'option1_name', 'option2_name', 'option3_name',
+            'track_quantity', 'quantity', 'allow_backorder',
             'quantity_policy', 'weight', 'weight_unit', 'requires_shipping',
             'taxable', 'featured', 'tags', 'variants', 'images', 'uploaded_images'
         ]

@@ -2,45 +2,44 @@
 from django.contrib import admin
 from django.urls import path, include, re_path
 from django.http import JsonResponse
-from rest_framework import permissions
-from drf_yasg.views import get_schema_view
-from drf_yasg import openapi
+from django.shortcuts import render
+from django.conf import settings
+from django.conf.urls.static import static
 
 def api_info(request):
     return JsonResponse({
         'message': 'Anon eCommerce API',
         'version': 'v1',
+        'status': 'active',
         'endpoints': {
             'products': '/api/products/',
             'accounts': '/accounts/',
             'admin': '/admin/',
-            'swagger': '/swagger/'
+            'api_docs': '/docs/'
+        },
+        'product_endpoints': {
+            'list': '/api/products/product/',
+            'detail': '/api/products/product/{slug}/',
+            'categories': '/api/products/category/',
+            'subcategories': '/api/products/subcategory/'
         }
     })
 
-schema_view = get_schema_view(
-   openapi.Info(
-      title="Anon eCommerce API",
-      default_version='v1',
-      description="API documentation for Anon eCommerce application",
-      terms_of_service="https://www.google.com/policies/terms/",
-      contact=openapi.Contact(email="contact@anon.com"),
-      license=openapi.License(name="BSD License"),
-   ),
-   public=True,
-   permission_classes=(permissions.AllowAny,),
-)
+def api_docs(request):
+    return render(request, 'api_docs.html')
 
 urlpatterns = [
-    # Simple API info instead of Swagger
+    # API info at root URL
     path('', api_info, name='api-info'),
+    
+    # API documentation
+    path('docs/', api_docs, name='api-docs'),
     
     path('admin/', admin.site.urls),
     path('accounts/', include('accounts.urls')),
     path('api/products/', include('products.urls')),
-    
-    # Swagger Documentation URLs
-    re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
-    re_path(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    re_path(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
 ]
+
+# Serve media files during development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

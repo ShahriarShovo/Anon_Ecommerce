@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, memo } from 'react'
+import React, { useState, useCallback, memo } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 
 const LoginModal = memo(({ isOpen, onClose }) => {
@@ -49,201 +49,379 @@ const LoginModal = memo(({ isOpen, onClose }) => {
         }
       } else {
         // Login logic
-        const loginData = {
-          email: formData.email,
-          password: formData.password
-        }
-        const result = await login(loginData)
+        const result = await login({ email: formData.email, password: formData.password })
         if (result.success) {
-          setSuccess(result.message)
-          
-          // Redirect based on user type
-          if (result.is_admin) {
-            // Admin login - redirect to admin dashboard
-            setTimeout(() => {
-              onClose()
-              window.location.replace('/admin-dashboard')
-            }, 1000)
-          } else {
-            // Customer login - stay on home page
-            setTimeout(() => {
-              onClose()
-            }, 1000)
-          }
+          setSuccess('Login successful!')
+          // Close modal after successful login
+          setTimeout(() => {
+            onClose()
+          }, 1000)
         } else {
           setError(result.message)
         }
       }
     } catch (error) {
-      setError('An unexpected error occurred. Please try again.')
+      setError(error.message || 'An error occurred')
     }
-  }, [formData, isSignUp, signup, login, onClose])
+  }, [isSignUp, formData, signup, login, onClose])
 
-  const toggleSignUp = useCallback(() => {
-    setIsSignUp(prev => !prev)
+  const resetForm = useCallback(() => {
+    setFormData({
+      full_name: '',
+      email: '',
+      password: '',
+      confirm_password: ''
+    })
+    setError('')
+    setSuccess('')
   }, [])
+
+  const toggleMode = useCallback(() => {
+    setIsSignUp(prev => !prev)
+    resetForm()
+  }, [resetForm])
 
   if (!isOpen) return null
 
   return (
-    <div className="modal" data-modal>
-      <div className="modal-close-overlay" data-modal-overlay onClick={onClose}></div>
-      <div className="modal-content">
-        <button className="modal-close-btn" data-modal-close onClick={onClose}>
-          <ion-icon name="close-outline"></ion-icon>
-        </button>
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000,
+      animation: 'fadeIn 0.2s ease-in-out'
+    }}>
+      <div style={{
+        backgroundColor: 'white',
+        borderRadius: '12px',
+        padding: '32px',
+        width: '90%',
+        maxWidth: '400px',
+        maxHeight: '90vh',
+        overflow: 'auto',
+        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+        animation: 'slideIn 0.3s ease-out'
+      }}>
+        {/* Header */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '24px'
+        }}>
+          <h2 style={{
+            fontSize: '24px',
+            fontWeight: '600',
+            color: '#1f2937',
+            margin: 0
+          }}>
+            {isSignUp ? 'Create Account' : 'Welcome Back'}
+          </h2>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '24px',
+              color: '#6b7280',
+              cursor: 'pointer',
+              padding: '4px',
+              borderRadius: '4px',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = '#f3f4f6'
+              e.target.style.color = '#374151'
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = 'transparent'
+              e.target.style.color = '#6b7280'
+            }}
+          >
+            ×
+          </button>
+        </div>
 
-        <div className="auth-container">
-          <div className="auth-header">
-            <h2 className="auth-title">
-              {isSignUp ? 'Create Account' : 'Welcome Back'}
-            </h2>
-            <p className="auth-subtitle">
-              {isSignUp 
-                ? 'Sign up to get started with Anon' 
-                : 'Sign in to your account to continue'
-              }
-            </p>
+        {/* Form */}
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {isSignUp && (
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: '#374151',
+                marginBottom: '6px'
+              }}>
+                Full Name
+              </label>
+              <input
+                type="text"
+                name="full_name"
+                value={formData.full_name}
+                onChange={handleInputChange}
+                required={isSignUp}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  transition: 'border-color 0.2s',
+                  boxSizing: 'border-box'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+              />
+            </div>
+          )}
+
+          <div>
+            <label style={{
+              display: 'block',
+              fontSize: '14px',
+              fontWeight: '500',
+              color: '#374151',
+              marginBottom: '6px'
+            }}>
+              Email
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              required
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
+                fontSize: '16px',
+                transition: 'border-color 0.2s',
+                boxSizing: 'border-box'
+              }}
+              onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+              onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+            />
           </div>
 
-          {/* Error and Success Messages */}
+          <div>
+            <label style={{
+              display: 'block',
+              fontSize: '14px',
+              fontWeight: '500',
+              color: '#374151',
+              marginBottom: '6px'
+            }}>
+              Password
+            </label>
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                required
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  paddingRight: '48px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  transition: 'border-color 0.2s',
+                  boxSizing: 'border-box'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: '#6b7280',
+                  cursor: 'pointer',
+                  fontSize: '18px'
+                }}
+              >
+                {showPassword ? '👁️' : '👁️‍🗨️'}
+              </button>
+            </div>
+          </div>
+
+          {isSignUp && (
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: '#374151',
+                marginBottom: '6px'
+              }}>
+                Confirm Password
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  name="confirm_password"
+                  value={formData.confirm_password}
+                  onChange={handleInputChange}
+                  required={isSignUp}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    paddingRight: '48px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    transition: 'border-color 0.2s',
+                    boxSizing: 'border-box'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                  onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: '#6b7280',
+                    cursor: 'pointer',
+                    fontSize: '18px'
+                  }}
+                >
+                  {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Error Message */}
           {error && (
-            <div className="auth-message error">
-              <ion-icon name="alert-circle-outline"></ion-icon>
+            <div style={{
+              padding: '12px',
+              backgroundColor: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: '8px',
+              color: '#dc2626',
+              fontSize: '14px'
+            }}>
               {error}
             </div>
           )}
-          
+
+          {/* Success Message */}
           {success && (
-            <div className="auth-message success">
-              <ion-icon name="checkmark-circle-outline"></ion-icon>
+            <div style={{
+              padding: '12px',
+              backgroundColor: '#f0fdf4',
+              border: '1px solid #bbf7d0',
+              borderRadius: '8px',
+              color: '#16a34a',
+              fontSize: '14px'
+            }}>
               {success}
             </div>
           )}
 
-          <form className="auth-form" onSubmit={handleSubmit}>
-            {isSignUp && (
-              <div className="input-group">
-                <label htmlFor="full_name">Full Name</label>
-                <input
-                  type="text"
-                  id="full_name"
-                  name="full_name"
-                  value={formData.full_name}
-                  onChange={handleInputChange}
-                  placeholder="Enter your full name"
-                  required
-                />
-              </div>
-            )}
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={isLoading}
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              backgroundColor: isLoading ? '#9ca3af' : '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '16px',
+              fontWeight: '500',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              transition: 'background-color 0.2s',
+              marginTop: '8px'
+            }}
+            onMouseEnter={(e) => {
+              if (!isLoading) {
+                e.target.style.backgroundColor = '#2563eb'
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isLoading) {
+                e.target.style.backgroundColor = '#3b82f6'
+              }
+            }}
+          >
+            {isLoading ? 'Loading...' : (isSignUp ? 'Create Account' : 'Sign In')}
+          </button>
 
-            <div className="input-group">
-              <label htmlFor="email">Email Address</label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                placeholder="Enter your email"
-                required
-              />
-            </div>
-
-            <div className="input-group">
-              <label htmlFor="password">Password</label>
-              <div className="password-input-wrapper">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  placeholder="Enter your password"
-                  required
-                />
-                <button
-                  type="button"
-                  className="password-toggle"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  <ion-icon name={showPassword ? "eye-off-outline" : "eye-outline"}></ion-icon>
-                </button>
-              </div>
-            </div>
-
-            {isSignUp && (
-              <div className="input-group">
-                <label htmlFor="confirm_password">Confirm Password</label>
-                <div className="password-input-wrapper">
-                  <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    id="confirm_password"
-                    name="confirm_password"
-                    value={formData.confirm_password}
-                    onChange={handleInputChange}
-                    placeholder="Confirm your password"
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="password-toggle"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  >
-                    <ion-icon name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}></ion-icon>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {!isSignUp && (
-              <div className="forgot-password">
-                <a href="#" className="forgot-link">Forgot Password?</a>
-              </div>
-            )}
-
-            <button type="submit" className="auth-btn" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <ion-icon name="hourglass-outline"></ion-icon>
-                  {isSignUp ? 'Creating Account...' : 'Signing In...'}
-                </>
-              ) : (
-                isSignUp ? 'Create Account' : 'Sign In'
-              )}
+          {/* Toggle Mode */}
+          <div style={{
+            textAlign: 'center',
+            marginTop: '16px',
+            fontSize: '14px',
+            color: '#6b7280'
+          }}>
+            {isSignUp ? 'Already have an account?' : "Don't have an account?"}
+            <button
+              type="button"
+              onClick={toggleMode}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#3b82f6',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500',
+                marginLeft: '4px',
+                textDecoration: 'underline'
+              }}
+            >
+              {isSignUp ? 'Sign In' : 'Sign Up'}
             </button>
-
-            <div className="auth-divider">
-              <span>or</span>
-            </div>
-
-            <button type="button" className="social-auth-btn">
-              <ion-icon name="logo-google"></ion-icon>
-              Continue with Google
-            </button>
-
-            <button type="button" className="social-auth-btn">
-              <ion-icon name="logo-facebook"></ion-icon>
-              Continue with Facebook
-            </button>
-          </form>
-
-          <div className="auth-footer">
-            <p>
-              {isSignUp ? 'Already have an account?' : "Don't have an account?"}
-              <button 
-                type="button" 
-                className="auth-toggle"
-                onClick={toggleSignUp}
-              >
-                {isSignUp ? 'Sign In' : 'Sign Up'}
-              </button>
-            </p>
           </div>
-        </div>
+        </form>
       </div>
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        
+        @keyframes slideIn {
+          from { 
+            opacity: 0;
+            transform: translateY(-20px) scale(0.95);
+          }
+          to { 
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+      `}</style>
     </div>
   )
 })
 
-export default LoginModal
+LoginModal.displayName = 'LoginModal'
+
+export { LoginModal }

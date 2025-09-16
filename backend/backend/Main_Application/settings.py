@@ -177,6 +177,10 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
+# Media files settings
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 # Swagger Settings
 SWAGGER_SETTINGS = {
     'SECURITY_DEFINITIONS': {

@@ -106,6 +106,19 @@ class ApiService {
     });
   }
 
+  // Products APIs
+  async getProducts() {
+    return this.request('/api/products/product/', {
+      method: 'GET',
+    });
+  }
+
+  async getProduct(slug) {
+    return this.request(`/api/products/product/${slug}/`, {
+      method: 'GET',
+    });
+  }
+
   // Token management
   setTokens(accessToken, refreshToken) {
     localStorage.setItem('access_token', accessToken);

@@ -18,27 +18,27 @@ class ProductVariant(models.Model):
         validators=[MinValueValidator(Decimal('0.00'))],
         help_text="Variant price"
     )
-    compare_at_price = models.DecimalField(
+    old_price = models.DecimalField(
         max_digits=10, 
         decimal_places=2, 
         null=True, 
         blank=True,
         validators=[MinValueValidator(Decimal('0.00'))],
-        help_text="Compare at price (original price)"
-    )
-    cost_per_item = models.DecimalField(
-        max_digits=10, 
-        decimal_places=2, 
-        null=True, 
-        blank=True,
-        validators=[MinValueValidator(Decimal('0.00'))],
-        help_text="Cost per item"
+        help_text="Old price (original price before discount)"
     )
     
     # Inventory
     quantity = models.PositiveIntegerField(default=0, help_text="Available quantity")
     track_quantity = models.BooleanField(default=True, help_text="Track inventory for this variant")
     allow_backorder = models.BooleanField(default=False, help_text="Allow backorder when out of stock")
+    
+    # Shopify-style Options (up to 3 options like Size, Color, Material)
+    option1_name = models.CharField(max_length=50, blank=True, null=True, help_text="Option 1 name (e.g., Size)")
+    option1_value = models.CharField(max_length=100, blank=True, null=True, help_text="Option 1 value (e.g., Small)")
+    option2_name = models.CharField(max_length=50, blank=True, null=True, help_text="Option 2 name (e.g., Color)")
+    option2_value = models.CharField(max_length=100, blank=True, null=True, help_text="Option 2 value (e.g., Red)")
+    option3_name = models.CharField(max_length=50, blank=True, null=True, help_text="Option 3 name (e.g., Material)")
+    option3_value = models.CharField(max_length=100, blank=True, null=True, help_text="Option 3 value (e.g., Cotton)")
     
     # Physical Properties
     weight = models.DecimalField(
@@ -61,13 +61,6 @@ class ProductVariant(models.Model):
         help_text="Weight unit"
     )
     
-    # Variant Options (for Shopify-style variants)
-    option1_name = models.CharField(max_length=100, blank=True, null=True, help_text="Option 1 name (e.g., 'Size')")
-    option1_value = models.CharField(max_length=100, blank=True, null=True, help_text="Option 1 value (e.g., 'Small')")
-    option2_name = models.CharField(max_length=100, blank=True, null=True, help_text="Option 2 name (e.g., 'Color')")
-    option2_value = models.CharField(max_length=100, blank=True, null=True, help_text="Option 2 value (e.g., 'Red')")
-    option3_name = models.CharField(max_length=100, blank=True, null=True, help_text="Option 3 name (e.g., 'Material')")
-    option3_value = models.CharField(max_length=100, blank=True, null=True, help_text="Option 3 value (e.g., 'Cotton')")
     
     # Status
     position = models.PositiveIntegerField(default=1, help_text="Display position")

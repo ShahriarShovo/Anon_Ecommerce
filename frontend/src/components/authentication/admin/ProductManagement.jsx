@@ -23,8 +23,10 @@ const ProductManagement = memo(() => {
     product_type: 'simple',
     status: 'draft',
     price: '',
-    compare_at_price: '',
-    cost_per_item: '',
+    old_price: '',
+    option1_name: '',
+    option2_name: '',
+    option3_name: '',
     track_quantity: true,
     quantity: '',
     allow_backorder: false,
@@ -39,6 +41,179 @@ const ProductManagement = memo(() => {
   })
   const [selectedImages, setSelectedImages] = useState([])
   const [imagePreviewUrls, setImagePreviewUrls] = useState([])
+  const [showVariantModal, setShowVariantModal] = useState(false)
+  const [editingVariant, setEditingVariant] = useState(null)
+  const [variantFormData, setVariantFormData] = useState({
+    title: '',
+    sku: '',
+    barcode: '',
+    price: '',
+    old_price: '',
+    quantity: '',
+    track_quantity: true,
+    allow_backorder: false,
+    weight: '',
+    weight_unit: 'kg',
+    option1_value: '',
+    option2_value: '',
+    option3_value: '',
+    position: 1,
+    is_active: true
+  })
+
+  // Variant Management Functions
+  const openVariantModal = (variant = null) => {
+    if (variant) {
+      setEditingVariant(variant)
+      setVariantFormData({
+        title: variant.title || '',
+        sku: variant.sku || '',
+        barcode: variant.barcode || '',
+        price: variant.price || '',
+        old_price: variant.old_price || '',
+        quantity: variant.quantity || '',
+        track_quantity: variant.track_quantity !== false,
+        allow_backorder: variant.allow_backorder || false,
+        weight: variant.weight || '',
+        weight_unit: variant.weight_unit || 'kg',
+        option1_value: variant.option1_value || '',
+        option2_value: variant.option2_value || '',
+        option3_value: variant.option3_value || '',
+        position: variant.position || 1,
+        is_active: variant.is_active !== false
+      })
+    } else {
+      setEditingVariant(null)
+      setVariantFormData({
+        title: '',
+        sku: '',
+        barcode: '',
+        price: '',
+        old_price: '',
+        quantity: '',
+        track_quantity: true,
+        allow_backorder: false,
+        weight: '',
+        weight_unit: 'kg',
+        option1_value: '',
+        option2_value: '',
+        option3_value: '',
+        position: formData.variants.length + 1,
+        is_active: true
+      })
+    }
+    setShowVariantModal(true)
+  }
+
+  const closeVariantModal = () => {
+    setShowVariantModal(false)
+    setEditingVariant(null)
+    setVariantFormData({
+      title: '',
+      sku: '',
+      barcode: '',
+      price: '',
+      old_price: '',
+      quantity: '',
+      track_quantity: true,
+      allow_backorder: false,
+      weight: '',
+      weight_unit: 'kg',
+      option1_value: '',
+      option2_value: '',
+      option3_value: '',
+      position: 1,
+      is_active: true
+    })
+  }
+
+  const handleVariantInputChange = (e) => {
+    const { name, value, type, checked } = e.target
+    setVariantFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }))
+  }
+
+  const saveVariant = () => {
+    if (!variantFormData.price) {
+      showMessage('Price is required for variant', 'error')
+      return
+    }
+
+    const newVariants = [...formData.variants]
+    
+    if (editingVariant) {
+      // Update existing variant
+      const index = newVariants.findIndex(v => v.id === editingVariant.id)
+      if (index !== -1) {
+        newVariants[index] = { ...editingVariant, ...variantFormData }
+      }
+    } else {
+      // Add new variant
+      const newVariant = {
+        id: Date.now(), // Temporary ID for frontend
+        ...variantFormData
+      }
+      newVariants.push(newVariant)
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      variants: newVariants
+    }))
+    
+    closeVariantModal()
+    showMessage(editingVariant ? 'Variant updated successfully!' : 'Variant added successfully!', 'success')
+  }
+
+  const deleteVariant = (variantId) => {
+    const newVariants = formData.variants.filter(v => v.id !== variantId)
+    setFormData(prev => ({
+      ...prev,
+      variants: newVariants
+    }))
+    showMessage('Variant deleted successfully!', 'success')
+  }
+
+  // Get product image URL
+  const getProductImageUrl = (product) => {
+    console.log('Product:', product.title, 'Primary Image:', product.primary_image, 'Images:', product.images)
+    
+    // Try primary image first
+    if (product.primary_image) {
+      // Try image_url first - construct full URL (already has /media/ prefix)
+      if (product.primary_image.image_url) {
+        const fullUrl = `http://127.0.0.1:8000${product.primary_image.image_url}`
+        console.log('Using primary image_url:', fullUrl)
+        return fullUrl
+      }
+      // Try image field with backend URL
+      if (product.primary_image.image) {
+        const fullUrl = `http://127.0.0.1:8000${product.primary_image.image}`
+        console.log('Using primary image field:', fullUrl)
+        return fullUrl
+      }
+    }
+    
+    // Try first image from images array
+    if (product.images && product.images.length > 0) {
+      const firstImage = product.images[0]
+      if (firstImage.image_url) {
+        const fullUrl = `http://127.0.0.1:8000${firstImage.image_url}`
+        console.log('Using first image_url:', fullUrl)
+        return fullUrl
+      }
+      if (firstImage.image) {
+        const fullUrl = `http://127.0.0.1:8000${firstImage.image}`
+        console.log('Using first image field:', fullUrl)
+        return fullUrl
+      }
+    }
+    
+    console.log('No image found for product:', product.title)
+    return null
+  }
 
   // Show message with auto-hide
   const showMessage = (message, type) => {
@@ -134,7 +309,13 @@ const ProductManagement = memo(() => {
       
       if (response.ok) {
         const data = await response.json()
-        setProducts(data)
+        console.log('API Response:', data)
+        console.log('Products with images:', data.results?.map(p => ({
+          title: p.title,
+          primary_image: p.primary_image,
+          images: p.images
+        })))
+        setProducts(data.results || data)
       } else {
         showMessage('Failed to fetch products', 'error')
       }
@@ -179,7 +360,8 @@ const ProductManagement = memo(() => {
         showMessage(`Product "${formData.title}" created successfully!`, 'success')
         setFormData({
           title: '', description: '', short_description: '', category: '', subcategory: '',
-          product_type: 'simple', status: 'draft', price: '', compare_at_price: '', cost_per_item: '',
+          product_type: 'simple', status: 'draft', price: '', old_price: '',
+          option1_name: '', option2_name: '', option3_name: '',
           track_quantity: true, quantity: '', allow_backorder: false, weight: '', weight_unit: 'kg',
           requires_shipping: true, taxable: true, featured: false, tags: '', variants: [], images: []
         })
@@ -231,7 +413,8 @@ const ProductManagement = memo(() => {
         showMessage(`Product "${formData.title}" updated successfully!`, 'success')
         setFormData({
           title: '', description: '', short_description: '', category: '', subcategory: '',
-          product_type: 'simple', status: 'draft', price: '', compare_at_price: '', cost_per_item: '',
+          product_type: 'simple', status: 'draft', price: '', old_price: '',
+          option1_name: '', option2_name: '', option3_name: '',
           track_quantity: true, quantity: '', allow_backorder: false, weight: '', weight_unit: 'kg',
           requires_shipping: true, taxable: true, featured: false, tags: '', variants: [], images: []
         })
@@ -338,8 +521,10 @@ const ProductManagement = memo(() => {
       product_type: product.product_type || 'simple',
       status: product.status || 'draft',
       price: product.price || '',
-      compare_at_price: product.compare_at_price || '',
-      cost_per_item: product.cost_per_item || '',
+      old_price: product.old_price || '',
+      option1_name: product.option1_name || '',
+      option2_name: product.option2_name || '',
+      option3_name: product.option3_name || '',
       track_quantity: product.track_quantity !== false,
       quantity: product.quantity || '',
       allow_backorder: product.allow_backorder || false,
@@ -361,7 +546,8 @@ const ProductManagement = memo(() => {
     setEditingProduct(null)
     setFormData({
       title: '', description: '', short_description: '', category: '', subcategory: '',
-      product_type: 'simple', status: 'draft', price: '', compare_at_price: '', cost_per_item: '',
+      product_type: 'simple', status: 'draft', price: '', old_price: '',
+      option1_name: '', option2_name: '', option3_name: '',
       track_quantity: true, quantity: '', allow_backorder: false, weight: '', weight_unit: 'kg',
       requires_shipping: true, taxable: true, featured: false, tags: '', variants: [], images: []
     })
@@ -573,6 +759,44 @@ const ProductManagement = memo(() => {
                       color: '#212b36',
                       marginBottom: '8px'
                     }}>
+                      Product Type *
+                    </label>
+                    <select
+                      name="product_type"
+                      value={formData.product_type}
+                      onChange={handleInputChange}
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: '1px solid #e1e3e5',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        color: '#212b36',
+                        background: 'white'
+                      }}
+                    >
+                      <option value="simple">Simple Product</option>
+                      <option value="variable">Variable Product (with variants)</option>
+                    </select>
+                    <p style={{ 
+                      fontSize: '12px', 
+                      color: '#6b7280', 
+                      marginTop: '4px',
+                      fontStyle: 'italic'
+                    }}>
+                      Choose "Variable Product" to create products with multiple variants (size, color, etc.)
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <label style={{ 
+                      display: 'block', 
+                      fontSize: '14px', 
+                      fontWeight: '500', 
+                      color: '#212b36',
+                      marginBottom: '8px'
+                    }}>
                       Description
                     </label>
                     <textarea
@@ -715,12 +939,12 @@ const ProductManagement = memo(() => {
                       color: '#212b36',
                       marginBottom: '8px'
                     }}>
-                      Compare at Price
+                      Old Price
                     </label>
                     <input
                       type="number"
-                      name="compare_at_price"
-                      value={formData.compare_at_price}
+                      name="old_price"
+                      value={formData.old_price}
                       onChange={handleInputChange}
                       step="0.01"
                       min="0"
@@ -736,36 +960,243 @@ const ProductManagement = memo(() => {
                     />
                   </div>
                   
-                  <div>
-                    <label style={{ 
-                      display: 'block', 
-                      fontSize: '14px', 
-                      fontWeight: '500', 
-                      color: '#212b36',
-                      marginBottom: '8px'
-                    }}>
-                      Cost per Item
-                    </label>
-                    <input
-                      type="number"
-                      name="cost_per_item"
-                      value={formData.cost_per_item}
-                      onChange={handleInputChange}
-                      step="0.01"
-                      min="0"
-                      style={{
-                        width: '100%',
-                        padding: '12px 16px',
-                        border: '1px solid #e1e3e5',
-                        borderRadius: '8px',
-                        fontSize: '14px',
-                        color: '#212b36'
-                      }}
-                      placeholder="0.00"
-                    />
-                  </div>
                 </div>
               </div>
+
+              {/* Variant Options (for Variable Products) */}
+              {formData.product_type === 'variable' && (
+                <div style={{ marginBottom: '24px' }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#212b36', margin: '0 0 16px 0' }}>
+                    Variant Options
+                  </h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ 
+                        display: 'block', 
+                        fontSize: '14px', 
+                        fontWeight: '500', 
+                        color: '#212b36',
+                        marginBottom: '8px'
+                      }}>
+                        Option 1 Name
+                      </label>
+                      <input
+                        type="text"
+                        name="option1_name"
+                        value={formData.option1_name}
+                        onChange={handleInputChange}
+                        placeholder="e.g., Size"
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: '1px solid #e1e3e5',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          color: '#212b36'
+                        }}
+                      />
+                    </div>
+                    
+                    <div>
+                      <label style={{ 
+                        display: 'block', 
+                        fontSize: '14px', 
+                        fontWeight: '500', 
+                        color: '#212b36',
+                        marginBottom: '8px'
+                      }}>
+                        Option 2 Name
+                      </label>
+                      <input
+                        type="text"
+                        name="option2_name"
+                        value={formData.option2_name}
+                        onChange={handleInputChange}
+                        placeholder="e.g., Color"
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: '1px solid #e1e3e5',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          color: '#212b36'
+                        }}
+                      />
+                    </div>
+                    
+                    <div>
+                      <label style={{ 
+                        display: 'block', 
+                        fontSize: '14px', 
+                        fontWeight: '500', 
+                        color: '#212b36',
+                        marginBottom: '8px'
+                      }}>
+                        Option 3 Name
+                      </label>
+                      <input
+                        type="text"
+                        name="option3_name"
+                        value={formData.option3_name}
+                        onChange={handleInputChange}
+                        placeholder="e.g., Material"
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: '1px solid #e1e3e5',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          color: '#212b36'
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <p style={{ 
+                    fontSize: '12px', 
+                    color: '#6b7280', 
+                    marginTop: '8px',
+                    fontStyle: 'italic'
+                  }}>
+                    Define up to 3 options for your product variants (e.g., Size, Color, Material)
+                  </p>
+                </div>
+              )}
+
+              {/* Product Variants Management */}
+              {formData.product_type === 'variable' && (
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#212b36', margin: '0' }}>
+                      Product Variants
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => openVariantModal()}
+                      style={{
+                        background: '#5c6ac4',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '8px 16px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      <span>+</span>
+                      Add Variant
+                    </button>
+                  </div>
+
+                  {formData.variants.length > 0 ? (
+                    <div style={{ 
+                      border: '1px solid #e1e3e5', 
+                      borderRadius: '8px', 
+                      overflow: 'hidden',
+                      background: 'white'
+                    }}>
+                      {formData.variants.map((variant, index) => (
+                        <div key={variant.id || index} style={{
+                          padding: '16px',
+                          borderBottom: index < formData.variants.length - 1 ? '1px solid #e1e3e5' : 'none',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center'
+                        }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                              <div>
+                                <h4 style={{ margin: '0 0 4px 0', fontSize: '14px', fontWeight: '600', color: '#212b36' }}>
+                                  {variant.title || `${formData.option1_name || 'Option 1'}: ${variant.option1_value || 'N/A'}`}
+                                </h4>
+                                <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#6b7280' }}>
+                                  {variant.option1_value && (
+                                    <span>{formData.option1_name}: {variant.option1_value}</span>
+                                  )}
+                                  {variant.option2_value && (
+                                    <span>{formData.option2_name}: {variant.option2_value}</span>
+                                  )}
+                                  {variant.option3_value && (
+                                    <span>{formData.option3_name}: {variant.option3_value}</span>
+                                  )}
+                                </div>
+                              </div>
+                              <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#6b7280' }}>
+                                <span>Price: ${variant.price}</span>
+                                {variant.old_price && <span>Old: ${variant.old_price}</span>}
+                                <span>Qty: {variant.quantity || 0}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              type="button"
+                              onClick={() => openVariantModal(variant)}
+                              style={{
+                                background: 'transparent',
+                                color: '#5c6ac4',
+                                border: '1px solid #5c6ac4',
+                                borderRadius: '4px',
+                                padding: '4px 8px',
+                                fontSize: '12px',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => deleteVariant(variant.id)}
+                              style={{
+                                background: 'transparent',
+                                color: '#dc2626',
+                                border: '1px solid #dc2626',
+                                borderRadius: '4px',
+                                padding: '4px 8px',
+                                fontSize: '12px',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{
+                      border: '2px dashed #d1d5db',
+                      borderRadius: '8px',
+                      padding: '32px',
+                      textAlign: 'center',
+                      background: '#f9fafb'
+                    }}>
+                      <p style={{ margin: '0 0 16px 0', color: '#6b7280' }}>
+                        No variants added yet. Click "Add Variant" to create your first variant.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => openVariantModal()}
+                        style={{
+                          background: '#5c6ac4',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '8px 16px',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Add Your First Variant
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Inventory */}
               <div style={{ marginBottom: '24px' }}>
@@ -1034,6 +1465,271 @@ const ProductManagement = memo(() => {
           </div>
         )}
 
+        {/* Variant Modal */}
+        {showVariantModal && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}>
+            <div style={{
+              background: 'white',
+              borderRadius: '12px',
+              padding: '24px',
+              width: '90%',
+              maxWidth: '600px',
+              maxHeight: '90vh',
+              overflow: 'auto',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#212b36', margin: '0' }}>
+                  {editingVariant ? 'Edit Variant' : 'Add Variant'}
+                </h2>
+                <button
+                  type="button"
+                  onClick={closeVariantModal}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    fontSize: '24px',
+                    cursor: 'pointer',
+                    color: '#6b7280'
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+
+              <form onSubmit={(e) => { e.preventDefault(); saveVariant(); }}>
+                <div style={{ display: 'grid', gap: '16px' }}>
+                  {/* Basic Information */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#212b36', marginBottom: '8px' }}>
+                      Variant Title
+                    </label>
+                    <input
+                      type="text"
+                      name="title"
+                      value={variantFormData.title}
+                      onChange={handleVariantInputChange}
+                      placeholder="e.g., Small - Red - Cotton"
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: '1px solid #e1e3e5',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        color: '#212b36'
+                      }}
+                    />
+                  </div>
+
+                  {/* Option Values */}
+                  {formData.option1_name && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#212b36', marginBottom: '8px' }}>
+                        {formData.option1_name}
+                      </label>
+                      <input
+                        type="text"
+                        name="option1_value"
+                        value={variantFormData.option1_value}
+                        onChange={handleVariantInputChange}
+                        placeholder={`Enter ${formData.option1_name.toLowerCase()}`}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: '1px solid #e1e3e5',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          color: '#212b36'
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {formData.option2_name && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#212b36', marginBottom: '8px' }}>
+                        {formData.option2_name}
+                      </label>
+                      <input
+                        type="text"
+                        name="option2_value"
+                        value={variantFormData.option2_value}
+                        onChange={handleVariantInputChange}
+                        placeholder={`Enter ${formData.option2_name.toLowerCase()}`}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: '1px solid #e1e3e5',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          color: '#212b36'
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {formData.option3_name && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#212b36', marginBottom: '8px' }}>
+                        {formData.option3_name}
+                      </label>
+                      <input
+                        type="text"
+                        name="option3_value"
+                        value={variantFormData.option3_value}
+                        onChange={handleVariantInputChange}
+                        placeholder={`Enter ${formData.option3_name.toLowerCase()}`}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: '1px solid #e1e3e5',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          color: '#212b36'
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Pricing */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#212b36', marginBottom: '8px' }}>
+                        Price *
+                      </label>
+                      <input
+                        type="number"
+                        name="price"
+                        value={variantFormData.price}
+                        onChange={handleVariantInputChange}
+                        step="0.01"
+                        min="0"
+                        required
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: '1px solid #e1e3e5',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          color: '#212b36'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#212b36', marginBottom: '8px' }}>
+                        Old Price
+                      </label>
+                      <input
+                        type="number"
+                        name="old_price"
+                        value={variantFormData.old_price}
+                        onChange={handleVariantInputChange}
+                        step="0.01"
+                        min="0"
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: '1px solid #e1e3e5',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          color: '#212b36'
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Inventory */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#212b36', marginBottom: '8px' }}>
+                        Quantity
+                      </label>
+                      <input
+                        type="number"
+                        name="quantity"
+                        value={variantFormData.quantity}
+                        onChange={handleVariantInputChange}
+                        min="0"
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: '1px solid #e1e3e5',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          color: '#212b36'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#212b36', marginBottom: '8px' }}>
+                        SKU
+                      </label>
+                      <input
+                        type="text"
+                        name="sku"
+                        value={variantFormData.sku}
+                        onChange={handleVariantInputChange}
+                        placeholder="Stock Keeping Unit"
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: '1px solid #e1e3e5',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          color: '#212b36'
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
+                  <button
+                    type="button"
+                    onClick={closeVariantModal}
+                    style={{
+                      background: 'transparent',
+                      color: '#6b7280',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      padding: '8px 16px',
+                      fontSize: '14px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    style={{
+                      background: '#5c6ac4',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '8px 16px',
+                      fontSize: '14px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {editingVariant ? 'Update Variant' : 'Add Variant'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
         {/* Products List */}
         <div style={{
           background: 'white',
@@ -1089,40 +1785,54 @@ const ProductManagement = memo(() => {
                     <div style={{ display: 'flex', alignItems: 'center' }}>
                       {/* Product Image */}
                       <div style={{
-                        width: '64px',
-                        height: '64px',
+                        width: '80px',
+                        height: '80px',
                         borderRadius: '8px',
                         overflow: 'hidden',
                         marginRight: '16px',
                         background: '#f3f4f6',
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center'
+                        justifyContent: 'center',
+                        border: '2px solid #e1e3e5',
+                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
                       }}>
-                        {product.primary_image ? (
+                        {getProductImageUrl(product) ? (
                           <img
-                            src={product.primary_image.image_url || (product.primary_image.image ? `http://127.0.0.1:8000${product.primary_image.image}` : null)}
-                            alt={product.primary_image.alt_text || product.title}
+                            src={getProductImageUrl(product)}
+                            alt={product.primary_image?.alt_text || product.title}
                             style={{
                               width: '100%',
                               height: '100%',
-                              objectFit: 'cover'
+                              objectFit: 'cover',
+                              transition: 'transform 0.2s ease'
                             }}
                             onError={(e) => {
+                              console.log('Image failed to load:', e.target.src)
                               e.target.style.display = 'none'
                               e.target.nextSibling.style.display = 'flex'
+                            }}
+                            onLoad={(e) => {
+                              console.log('Image loaded successfully:', e.target.src)
+                            }}
+                            onMouseEnter={(e) => {
+                              e.target.style.transform = 'scale(1.05)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.target.style.transform = 'scale(1)'
                             }}
                           />
                         ) : null}
                         <div style={{
-                          display: product.primary_image ? 'none' : 'flex',
+                          display: getProductImageUrl(product) ? 'none' : 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           width: '100%',
                           height: '100%',
                           background: 'linear-gradient(135deg, #5c6ac4 0%, #7c3aed 100%)',
                           color: 'white',
-                          fontSize: '24px'
+                          fontSize: '28px',
+                          fontWeight: 'bold'
                         }}>
                           📦
                         </div>

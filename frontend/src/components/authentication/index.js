@@ -1,5 +1,5 @@
 // Authentication Components
-export { default as LoginModal } from './LoginModal'
+export { LoginModal } from './LoginModal'
 
 // Customer Components
 export { default as Profile } from './customer/Profile'

@@ -21,7 +21,15 @@ class Product(models.Model):
     subcategory = models.ForeignKey(SubCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='products')
     
     # Product Type & Status
-    product_type = models.CharField(max_length=100, default='simple', help_text="Product type (simple, variable, etc.)")
+    product_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('simple', 'Simple'),
+            ('variable', 'Variable'),
+        ],
+        default='simple',
+        help_text="Product type"
+    )
     status = models.CharField(
         max_length=20,
         choices=[
@@ -33,6 +41,11 @@ class Product(models.Model):
         help_text="Product status"
     )
     
+    # Shopify-style Variant Options
+    option1_name = models.CharField(max_length=50, blank=True, null=True, help_text="Option 1 name (e.g., Size)")
+    option2_name = models.CharField(max_length=50, blank=True, null=True, help_text="Option 2 name (e.g., Color)")
+    option3_name = models.CharField(max_length=50, blank=True, null=True, help_text="Option 3 name (e.g., Material)")
+    
     # Pricing (for simple products)
     price = models.DecimalField(
         max_digits=10, 
@@ -42,21 +55,13 @@ class Product(models.Model):
         validators=[MinValueValidator(Decimal('0.00'))],
         help_text="Product price"
     )
-    compare_at_price = models.DecimalField(
+    old_price = models.DecimalField(
         max_digits=10, 
         decimal_places=2, 
         null=True, 
         blank=True,
         validators=[MinValueValidator(Decimal('0.00'))],
-        help_text="Compare at price (original price)"
-    )
-    cost_per_item = models.DecimalField(
-        max_digits=10, 
-        decimal_places=2, 
-        null=True, 
-        blank=True,
-        validators=[MinValueValidator(Decimal('0.00'))],
-        help_text="Cost per item"
+        help_text="Old price (original price before discount)"
     )
     
     # Inventory
