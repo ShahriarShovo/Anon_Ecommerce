@@ -1,0 +1,412 @@
+import React, { useState, useEffect } from 'react'
+import apiService from '../services/api'
+
+const SingleProduct = () => {
+  // Get slug from URL path
+  const currentPath = window.location.pathname
+  const slug = currentPath.split('/product/')[1]
+  
+  const [product, setProduct] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [selectedImage, setSelectedImage] = useState(0)
+  const [selectedVariant, setSelectedVariant] = useState(null)
+  const [reviews, setReviews] = useState([])
+  const [showReviewForm, setShowReviewForm] = useState(false)
+  const [reviewForm, setReviewForm] = useState({
+    rating: 5,
+    title: '',
+    comment: '',
+    user_name: '',
+    user_email: ''
+  })
+
+  useEffect(() => {
+    if (slug) {
+      fetchProduct()
+      fetchReviews()
+    }
+  }, [slug])
+
+  const fetchProduct = async () => {
+    try {
+      setLoading(true)
+      const response = await apiService.getSingleProduct(slug)
+      
+      if (response.success) {
+        setProduct(response.product)
+        // Set first variant as default if available
+        if (response.product.variants && response.product.variants.length > 0) {
+          setSelectedVariant(response.product.variants[0])
+        }
+      } else {
+        throw new Error(response.error || 'Failed to fetch product')
+      }
+    } catch (error) {
+      console.error('Error fetching product:', error)
+      setError('Failed to load product')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const formatPrice = (price) => {
+    if (typeof price === 'string') return price
+    return `$${parseFloat(price).toFixed(2)}`
+  }
+
+  const fetchReviews = async () => {
+    try {
+      const response = await apiService.getProductReviews(slug)
+      if (response.success) {
+        setReviews(response.reviews)
+      }
+    } catch (error) {
+      console.error('Error fetching reviews:', error)
+    }
+  }
+
+  const handleVariantChange = (variant) => {
+    setSelectedVariant(variant)
+  }
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault()
+    try {
+      const response = await apiService.createProductReview(slug, reviewForm)
+      if (response.success) {
+        setShowReviewForm(false)
+        setReviewForm({
+          rating: 5,
+          title: '',
+          comment: '',
+          user_name: '',
+          user_email: ''
+        })
+        fetchReviews() // Refresh reviews
+        alert('Review submitted successfully!')
+      }
+    } catch (error) {
+      console.error('Error submitting review:', error)
+      alert('Failed to submit review. Please try again.')
+    }
+  }
+
+  const handleReviewInputChange = (e) => {
+    const { name, value } = e.target
+    setReviewForm(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  const renderStars = (rating, interactive = false, onChange = null) => {
+    return (
+      <div className="star-rating">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            type={interactive ? "button" : undefined}
+            className={`star ${star <= rating ? 'filled' : ''}`}
+            onClick={interactive ? () => onChange && onChange(star) : undefined}
+            disabled={!interactive}
+          >
+            <ion-icon name="star"></ion-icon>
+          </button>
+        ))}
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '400px',
+        fontSize: '18px',
+        color: '#666'
+      }}>
+        Loading product...
+      </div>
+    )
+  }
+
+  if (error || !product) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '400px',
+        fontSize: '18px',
+        color: '#dc2626'
+      }}>
+        {error || 'Product not found'}
+      </div>
+    )
+  }
+
+  const currentPrice = selectedVariant ? selectedVariant.price : product.price
+  const currentOldPrice = selectedVariant ? selectedVariant.old_price : product.old_price
+
+  return (
+    <div className="single-product">
+      <div className="container">
+        <div className="product-detail">
+          <div className="product-gallery">
+            {/* Main Image */}
+            <div className="main-image">
+              {product.images && product.images.length > 0 ? (
+                <img 
+                  src={product.images[selectedImage]?.image_url} 
+                  alt={product.images[selectedImage]?.alt_text || product.title}
+                  className="product-main-img"
+                />
+              ) : (
+                <img 
+                  src="/assets/images/products/1.jpg" 
+                  alt={product.title}
+                  className="product-main-img"
+                />
+              )}
+            </div>
+
+            {/* Thumbnail Images */}
+            {product.images && product.images.length > 1 && (
+              <div className="thumbnail-images">
+                {product.images.map((image, index) => (
+                  <img
+                    key={image.id}
+                    src={image.image_url}
+                    alt={image.alt_text || product.title}
+                    className={`thumbnail ${selectedImage === index ? 'active' : ''}`}
+                    onClick={() => setSelectedImage(index)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="product-info">
+            {/* Breadcrumb */}
+            <div className="breadcrumb">
+              <a href="/">Home</a>
+              {product.category && (
+                <>
+                  <span> / </span>
+                  <a href="#">{product.category.name}</a>
+                </>
+              )}
+              <span> / </span>
+              <span>{product.title}</span>
+            </div>
+
+            {/* Product Title */}
+            <h1 className="product-title">{product.title}</h1>
+
+            {/* Rating */}
+            <div className="product-rating">
+              {renderStars(4.5)}
+              <span className="rating-text">(4.5) {reviews.length} Reviews</span>
+            </div>
+
+            {/* Price */}
+            <div className="product-price">
+              <span className="current-price">{formatPrice(currentPrice)}</span>
+              {currentOldPrice && (
+                <span className="old-price">{formatPrice(currentOldPrice)}</span>
+              )}
+            </div>
+
+            {/* Description */}
+            {product.description && (
+              <div className="product-description">
+                <p>{product.description}</p>
+              </div>
+            )}
+
+            {/* Variants */}
+            {product.variants && product.variants.length > 0 && (
+              <div className="product-variants">
+                <h3>Options:</h3>
+                <div className="variant-options">
+                  {product.variants.map((variant) => (
+                    <button
+                      key={variant.id}
+                      className={`variant-option ${selectedVariant?.id === variant.id ? 'selected' : ''}`}
+                      onClick={() => handleVariantChange(variant)}
+                    >
+                      {variant.title}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Quantity and Add to Cart */}
+            <div className="product-actions">
+              <div className="quantity-selector">
+                <button className="qty-btn">-</button>
+                <input type="number" value="1" min="1" className="qty-input" />
+                <button className="qty-btn">+</button>
+              </div>
+              
+              <button className="add-to-cart-btn">
+                <ion-icon name="bag-add-outline"></ion-icon>
+                Add to Cart
+              </button>
+              
+              <button className="wishlist-btn">
+                <ion-icon name="heart-outline"></ion-icon>
+              </button>
+            </div>
+
+            {/* Product Details */}
+            <div className="product-details">
+              <div className="detail-item">
+                <strong>SKU:</strong> {selectedVariant?.sku || 'N/A'}
+              </div>
+              <div className="detail-item">
+                <strong>Category:</strong> {product.category?.name || 'N/A'}
+              </div>
+              <div className="detail-item">
+                <strong>Stock:</strong> {selectedVariant?.quantity || product.quantity} available
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Customer Reviews Section */}
+        <div className="reviews-section">
+          <div className="container">
+            <div className="reviews-header">
+              <h2>Customer Reviews</h2>
+              <button 
+                className="write-review-btn"
+                onClick={() => setShowReviewForm(!showReviewForm)}
+              >
+                Write a Review
+              </button>
+            </div>
+
+            {/* Review Form */}
+            {showReviewForm && (
+              <div className="review-form-container">
+                <form className="review-form" onSubmit={handleReviewSubmit}>
+                  <h3>Write Your Review</h3>
+                  
+                  <div className="form-group">
+                    <label>Rating *</label>
+                    {renderStars(reviewForm.rating, true, (rating) => 
+                      setReviewForm(prev => ({ ...prev, rating }))
+                    )}
+                  </div>
+
+                  <div className="form-group">
+                    <label>Your Name *</label>
+                    <input
+                      type="text"
+                      name="user_name"
+                      value={reviewForm.user_name}
+                      onChange={handleReviewInputChange}
+                      required
+                      placeholder="Enter your name"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Email</label>
+                    <input
+                      type="email"
+                      name="user_email"
+                      value={reviewForm.user_email}
+                      onChange={handleReviewInputChange}
+                      placeholder="Enter your email (optional)"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Review Title</label>
+                    <input
+                      type="text"
+                      name="title"
+                      value={reviewForm.title}
+                      onChange={handleReviewInputChange}
+                      placeholder="Summarize your review"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Your Review *</label>
+                    <textarea
+                      name="comment"
+                      value={reviewForm.comment}
+                      onChange={handleReviewInputChange}
+                      required
+                      rows="4"
+                      placeholder="Tell us about your experience with this product"
+                    ></textarea>
+                  </div>
+
+                  <div className="form-actions">
+                    <button type="button" onClick={() => setShowReviewForm(false)}>
+                      Cancel
+                    </button>
+                    <button type="submit">Submit Review</button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* Reviews List */}
+            <div className="reviews-list">
+              {reviews.length > 0 ? (
+                reviews.map((review) => (
+                  <div key={review.id} className="review-item">
+                    <div className="review-header">
+                      <div className="reviewer-info">
+                        <div className="reviewer-avatar">
+                          {review.user_name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="reviewer-details">
+                          <h4>{review.user_name}</h4>
+                          <span className="review-date">
+                            {new Date(review.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="review-rating">
+                        {renderStars(review.rating)}
+                      </div>
+                    </div>
+                    
+                    {review.title && (
+                      <h5 className="review-title">{review.title}</h5>
+                    )}
+                    
+                    <p className="review-comment">{review.comment}</p>
+                    
+                    {review.is_verified_purchase && (
+                      <span className="verified-badge">
+                        <ion-icon name="checkmark-circle"></ion-icon>
+                        Verified Purchase
+                      </span>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="no-reviews">
+                  <p>No reviews yet. Be the first to review this product!</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default SingleProduct
