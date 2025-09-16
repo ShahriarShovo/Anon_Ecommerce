@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react'
 import apiService from '../services/api'
+import { useAuth } from '../contexts/AuthContext'
+import { LoginModal } from './authentication'
 
 const SingleProduct = () => {
   // Get slug from URL path
   const currentPath = window.location.pathname
   const slug = currentPath.split('/product/')[1]
+  
+  // Get authentication context
+  const { user, isAuthenticated } = useAuth()
   
   const [product, setProduct] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -13,6 +18,8 @@ const SingleProduct = () => {
   const [selectedVariant, setSelectedVariant] = useState(null)
   const [reviews, setReviews] = useState([])
   const [showReviewForm, setShowReviewForm] = useState(false)
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [addingToCart, setAddingToCart] = useState(false)
   const [reviewForm, setReviewForm] = useState({
     rating: 5,
     title: '',
@@ -27,6 +34,23 @@ const SingleProduct = () => {
       fetchReviews()
     }
   }, [slug])
+
+  // Pre-fill review form with user data when authenticated
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      setReviewForm(prev => ({
+        ...prev,
+        user_name: user.full_name || user.email || '',
+        user_email: user.email || ''
+      }))
+      
+      // If user just logged in and auth modal was open, open review form
+      if (showAuthModal) {
+        setShowAuthModal(false)
+        setShowReviewForm(true)
+      }
+    }
+  }, [isAuthenticated, user, showAuthModal])
 
   const fetchProduct = async () => {
     try {
@@ -80,8 +104,8 @@ const SingleProduct = () => {
           rating: 5,
           title: '',
           comment: '',
-          user_name: '',
-          user_email: ''
+          user_name: isAuthenticated ? (user?.full_name || user?.email || '') : '',
+          user_email: isAuthenticated ? (user?.email || '') : ''
         })
         fetchReviews() // Refresh reviews
         alert('Review submitted successfully!')
@@ -98,6 +122,50 @@ const SingleProduct = () => {
       ...prev,
       [name]: value
     }))
+  }
+
+  // Add to cart function
+  const handleAddToCart = async () => {
+    if (!product) return
+
+    try {
+      setAddingToCart(true)
+      
+      const response = await apiService.addToCart(
+        product.id, 
+        1, 
+        selectedVariant ? selectedVariant.id : null
+      )
+      
+      if (response.success) {
+        // Update sessionStorage
+        const currentCount = parseInt(sessionStorage.getItem('cartCount') || '0')
+        sessionStorage.setItem('cartCount', (currentCount + 1).toString())
+        console.log('🛒 SingleProduct: Updated sessionStorage cart count to:', currentCount + 1)
+        
+        alert(`${product.title} added to cart successfully!`)
+        
+        // Dispatch cart update event to update header counter
+        window.dispatchEvent(new CustomEvent('cartUpdated'))
+        
+        // Also dispatch cart sync event
+        console.log('🛒 SingleProduct: Dispatching cartSync event...')
+        window.dispatchEvent(new CustomEvent('cartSync'))
+        
+        // Also dispatch force sync event
+        console.log('🛒 SingleProduct: Dispatching forceCartSync event...')
+        window.dispatchEvent(new CustomEvent('forceCartSync'))
+        
+        console.log('Item added to cart:', response.cart_item)
+      } else {
+        throw new Error(response.error || 'Failed to add to cart')
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error)
+      alert(`Failed to add ${product.title} to cart: ${error.message}`)
+    } finally {
+      setAddingToCart(false)
+    }
   }
 
   const renderStars = (rating, interactive = false, onChange = null) => {
@@ -153,6 +221,12 @@ const SingleProduct = () => {
 
   return (
     <div className="single-product">
+      {/* Auth Modal */}
+      <LoginModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)} 
+      />
+      
       <div className="container">
         <div className="product-detail">
           <div className="product-gallery">
@@ -249,13 +323,17 @@ const SingleProduct = () => {
             <div className="product-actions">
               <div className="quantity-selector">
                 <button className="qty-btn">-</button>
-                <input type="number" value="1" min="1" className="qty-input" />
+                <input type="number" defaultValue="1" min="1" className="qty-input" readOnly />
                 <button className="qty-btn">+</button>
               </div>
               
-              <button className="add-to-cart-btn">
-                <ion-icon name="bag-add-outline"></ion-icon>
-                Add to Cart
+              <button 
+                className="add-to-cart-btn"
+                onClick={handleAddToCart}
+                disabled={addingToCart}
+              >
+                <ion-icon name={addingToCart ? "hourglass-outline" : "bag-add-outline"}></ion-icon>
+                {addingToCart ? "Adding..." : "Add to Cart"}
               </button>
               
               <button className="wishlist-btn">
@@ -283,12 +361,21 @@ const SingleProduct = () => {
           <div className="container">
             <div className="reviews-header">
               <h2>Customer Reviews</h2>
-              <button 
-                className="write-review-btn"
-                onClick={() => setShowReviewForm(!showReviewForm)}
-              >
-                Write a Review
-              </button>
+              {isAuthenticated ? (
+                <button 
+                  className="write-review-btn"
+                  onClick={() => setShowReviewForm(!showReviewForm)}
+                >
+                  Write a Review
+                </button>
+              ) : (
+                <button 
+                  className="write-review-btn"
+                  onClick={() => setShowAuthModal(true)}
+                >
+                  Login to Review
+                </button>
+              )}
             </div>
 
             {/* Review Form */}
@@ -304,28 +391,42 @@ const SingleProduct = () => {
                     )}
                   </div>
 
-                  <div className="form-group">
-                    <label>Your Name *</label>
-                    <input
-                      type="text"
-                      name="user_name"
-                      value={reviewForm.user_name}
-                      onChange={handleReviewInputChange}
-                      required
-                      placeholder="Enter your name"
-                    />
-                  </div>
+                  {!isAuthenticated && (
+                    <>
+                      <div className="form-group">
+                        <label>Your Name *</label>
+                        <input
+                          type="text"
+                          name="user_name"
+                          value={reviewForm.user_name}
+                          onChange={handleReviewInputChange}
+                          required
+                          placeholder="Enter your name"
+                        />
+                      </div>
 
-                  <div className="form-group">
-                    <label>Email</label>
-                    <input
-                      type="email"
-                      name="user_email"
-                      value={reviewForm.user_email}
-                      onChange={handleReviewInputChange}
-                      placeholder="Enter your email (optional)"
-                    />
-                  </div>
+                      <div className="form-group">
+                        <label>Email</label>
+                        <input
+                          type="email"
+                          name="user_email"
+                          value={reviewForm.user_email}
+                          onChange={handleReviewInputChange}
+                          placeholder="Enter your email (optional)"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {isAuthenticated && (
+                    <div className="form-group">
+                      <label>Reviewing as:</label>
+                      <div className="user-info">
+                        <strong>{user?.full_name || user?.email}</strong>
+                        <span className="verified-badge">✓ Verified Customer</span>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="form-group">
                     <label>Review Title</label>

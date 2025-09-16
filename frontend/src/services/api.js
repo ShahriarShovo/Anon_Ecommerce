@@ -16,6 +16,7 @@ class ApiService {
         'Content-Type': 'application/json',
         ...options.headers,
       },
+      credentials: 'include', // Include cookies for session management
       ...options,
     };
 
@@ -26,8 +27,12 @@ class ApiService {
     }
 
     try {
+      console.log('🌐 API: Making request to:', url, 'with config:', config);
+      console.log('🌐 API: Cookies being sent:', document.cookie);
       const response = await fetch(url, config);
       const data = await response.json();
+      console.log('🌐 API: Response status:', response.status, 'Data:', data);
+      console.log('🌐 API: Response cookies:', response.headers.get('Set-Cookie'));
 
       if (!response.ok) {
         throw new Error(data.message || `HTTP error! status: ${response.status}`);
@@ -35,7 +40,7 @@ class ApiService {
 
       return data;
     } catch (error) {
-      console.error('API Request failed:', error);
+      console.error('🌐 API: Request failed:', error);
       throw error;
     }
   }
@@ -144,6 +149,65 @@ class ApiService {
     return this.request(`/api/products/product-reviews/${slug}/create/`, {
       method: 'POST',
       body: JSON.stringify(reviewData),
+    });
+  }
+
+  // Cart APIs
+  async addToCart(productId, quantity = 1, variantId = null) {
+    return this.request('/api/cart/add/', {
+      method: 'POST',
+      body: JSON.stringify({
+        product_id: productId,
+        quantity: quantity,
+        variant_id: variantId
+      }),
+    });
+  }
+
+  async getCart() {
+    return this.request('/api/cart/', {
+      method: 'GET',
+    });
+  }
+
+  async increaseCartItemQuantity(itemId) {
+    return this.request(`/api/cart/items/${itemId}/increase/`, {
+      method: 'POST',
+    });
+  }
+
+  async decreaseCartItemQuantity(itemId) {
+    return this.request(`/api/cart/items/${itemId}/decrease/`, {
+      method: 'POST',
+    });
+  }
+
+  async clearCart() {
+    return this.request('/api/cart/clear/', {
+      method: 'DELETE',
+    });
+  }
+
+  // Wishlist APIs
+  async addToWishlist(productId, variantId = null) {
+    return this.request('/api/wishlist/add/', {
+      method: 'POST',
+      body: JSON.stringify({
+        product_id: productId,
+        variant_id: variantId
+      }),
+    });
+  }
+
+  async getWishlist() {
+    return this.request('/api/wishlist/', {
+      method: 'GET',
+    });
+  }
+
+  async removeFromWishlist(itemId) {
+    return this.request(`/api/wishlist/items/${itemId}/remove/`, {
+      method: 'DELETE',
     });
   }
 

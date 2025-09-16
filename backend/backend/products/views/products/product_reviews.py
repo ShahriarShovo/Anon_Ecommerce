@@ -1,5 +1,5 @@
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
@@ -37,7 +37,7 @@ def get_product_reviews(request, slug):
         for review in reviews:
             reviews_data.append({
                 'id': review.id,
-                'user_name': review.user.full_name if review.user and review.user.full_name else 'Anonymous',
+                'user_name': review.user.email if review.user else review.user_name or 'Anonymous',
                 'user_avatar': None,  # You can add avatar field later
                 'rating': review.rating,
                 'title': review.title,
@@ -65,7 +65,7 @@ def get_product_reviews(request, slug):
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])  # You can add authentication later
+@permission_classes([IsAuthenticated])  # Only authenticated users can create reviews
 def create_product_review(request, slug):
     """
     Create a new product review
@@ -74,12 +74,21 @@ def create_product_review(request, slug):
         # Get product
         product = get_object_or_404(Product, slug=slug, status='active')
         
+        # Get authenticated user
+        user = request.user
+        
+        # Check if user has already reviewed this product
+        existing_review = ProductReview.objects.filter(product=product, user=user).first()
+        if existing_review:
+            return Response({
+                'success': False,
+                'error': 'You have already reviewed this product'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
         # Get review data
         rating = request.data.get('rating')
         title = request.data.get('title', '')
         comment = request.data.get('comment', '')
-        user_name = request.data.get('user_name', 'Anonymous')
-        user_email = request.data.get('user_email', '')
         
         # Validate rating
         if not rating or not (1 <= int(rating) <= 5):
@@ -88,15 +97,24 @@ def create_product_review(request, slug):
                 'error': 'Rating must be between 1 and 5'
             }, status=status.HTTP_400_BAD_REQUEST)
         
+        # Validate required fields
+        if not comment.strip():
+            return Response({
+                'success': False,
+                'error': 'Comment is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
         # Create review
         review = ProductReview.objects.create(
             product=product,
+            user=user,  # Use authenticated user
             rating=int(rating),
             title=title,
             comment=comment,
-            user_name=user_name,
-            user_email=user_email,
-            is_approved=True  # Auto-approve for now
+            user_name=user.email,  # Use user email as display name
+            user_email=user.email,
+            is_approved=True,  # Auto-approve for authenticated users
+            is_verified_purchase=True  # Mark as verified for authenticated users
         )
         
         return Response({

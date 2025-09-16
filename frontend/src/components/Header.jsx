@@ -1,15 +1,276 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useCategories } from '../contexts/CategoriesContext'
+import apiService from '../services/api'
+import CartPage from './CartPage'
 
 const Header = ({ onAuthClick }) => {
   const { user, isAuthenticated, logout } = useAuth()
   const { categories, subcategories, loading, getSubCategoriesForCategory } = useCategories()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [cartCount, setCartCount] = useState(0)
+  const [isCartOpen, setIsCartOpen] = useState(false)
   
   // Check if we're on admin dashboard
   const isAdminDashboard = window.location.pathname === '/admin-dashboard' || window.location.pathname.startsWith('/admin-dashboard/')
+
+  // Fetch cart count
+  const fetchCartCount = async () => {
+    try {
+      console.log('🛒 Header: Fetching cart count...')
+      const response = await apiService.getCart()
+      console.log('🛒 Header: Cart API response:', response)
+      
+      if (response.success && response.cart) {
+        console.log('🛒 Header: Full cart response:', JSON.stringify(response.cart, null, 2))
+        
+        // Always calculate count from items as primary method
+        const items = response.cart.items || []
+        const calculatedCount = items.reduce((sum, item) => sum + (item.quantity || 0), 0)
+        const apiCount = response.cart.total_items || 0
+        
+        console.log('🛒 Header: API total_items:', apiCount)
+        console.log('🛒 Header: Calculated from items:', calculatedCount)
+        console.log('🛒 Header: Cart ID:', response.cart.id)
+        console.log('🛒 Header: Cart items:', items.length)
+        console.log('🛒 Header: Cart subtotal:', response.cart.subtotal)
+        
+        // Use calculated count as primary, API count as fallback
+        const finalCount = calculatedCount > 0 ? calculatedCount : apiCount
+        console.log('🛒 Header: Setting cart count to:', finalCount)
+        
+        // Debug: Check if we're using calculated or API count
+        if (calculatedCount > 0 && apiCount === 0) {
+          console.log('🛒 Header: Using calculated count because API total_items is 0')
+        } else if (apiCount > 0) {
+          console.log('🛒 Header: Using API count')
+        } else {
+          console.log('🛒 Header: Both counts are 0, cart is empty')
+        }
+        
+        // If both counts are 0 but sessionStorage has a count, use sessionStorage
+        if (finalCount === 0) {
+          const storedCount = sessionStorage.getItem('cartCount')
+          if (storedCount && parseInt(storedCount) > 0) {
+            console.log('🛒 Header: Using sessionStorage count as fallback:', storedCount)
+            setCartCount(parseInt(storedCount))
+            return
+          }
+        }
+        
+        // If calculated count is 0 but sessionStorage has count, use sessionStorage
+        if (calculatedCount === 0 && apiCount === 0) {
+          const storedCount = sessionStorage.getItem('cartCount')
+          if (storedCount && parseInt(storedCount) > 0) {
+            console.log('🛒 Header: Session mismatch detected, using sessionStorage count:', storedCount)
+            setCartCount(parseInt(storedCount))
+            return
+          }
+        }
+        
+        // If both counts are 0 but sessionStorage has count, use sessionStorage
+        if (finalCount === 0) {
+          const storedCount = sessionStorage.getItem('cartCount')
+          if (storedCount && parseInt(storedCount) > 0) {
+            console.log('🛒 Header: Using sessionStorage count as fallback:', storedCount)
+            setCartCount(parseInt(storedCount))
+            return
+          }
+        }
+        
+        // Debug: Log the full cart response structure
+        console.log('🛒 Header: Full cart response structure:', {
+          id: response.cart.id,
+          total_items: response.cart.total_items,
+          subtotal: response.cart.subtotal,
+          items_count: response.cart.items?.length || 0,
+          items: response.cart.items?.map(item => ({
+            id: item.id,
+            quantity: item.quantity,
+            product_title: item.product?.title
+          })) || []
+        })
+        
+        // Debug: Check if we're using calculated or API count
+        if (calculatedCount > 0 && apiCount === 0) {
+          console.log('🛒 Header: Using calculated count because API total_items is 0')
+        } else if (apiCount > 0) {
+          console.log('🛒 Header: Using API count')
+        } else {
+          console.log('🛒 Header: Both counts are 0, cart is empty')
+        }
+        
+        // Store cart count in sessionStorage as backup
+        sessionStorage.setItem('cartCount', finalCount.toString())
+        setCartCount(finalCount)
+      } else {
+        console.log('🛒 Header: Cart API failed or no cart data')
+        // Try to get from sessionStorage
+        const storedCount = sessionStorage.getItem('cartCount')
+        if (storedCount) {
+          console.log('🛒 Header: Using stored cart count:', storedCount)
+          setCartCount(parseInt(storedCount))
+        } else {
+          setCartCount(0)
+        }
+      }
+    } catch (error) {
+      console.error('🛒 Header: Error fetching cart count:', error)
+      // Try to get from sessionStorage
+      const storedCount = sessionStorage.getItem('cartCount')
+      if (storedCount) {
+        console.log('🛒 Header: Using stored cart count on error:', storedCount)
+        setCartCount(parseInt(storedCount))
+      } else {
+        setCartCount(0)
+      }
+    }
+  }
+
+  // Load cart count on component mount
+  useEffect(() => {
+    // First try to get from sessionStorage
+    const storedCount = sessionStorage.getItem('cartCount')
+    if (storedCount) {
+      console.log('🛒 Header: Using stored cart count on mount:', storedCount)
+      setCartCount(parseInt(storedCount))
+    }
+    
+    // Then fetch from API
+    fetchCartCount()
+  }, [])
+  
+  // Add a function to sync sessionStorage with cart count
+  const syncCartCount = () => {
+    const storedCount = sessionStorage.getItem('cartCount')
+    if (storedCount) {
+      console.log('🛒 Header: Syncing cart count from sessionStorage:', storedCount)
+      setCartCount(parseInt(storedCount))
+    }
+  }
+  
+  // Add a function to force sync from sessionStorage
+  const forceSyncFromSessionStorage = () => {
+    const storedCount = sessionStorage.getItem('cartCount')
+    if (storedCount && parseInt(storedCount) > 0) {
+      console.log('🛒 Header: Force syncing from sessionStorage:', storedCount)
+      setCartCount(parseInt(storedCount))
+    }
+  }
+
+  // Listen for cart updates (custom event)
+  useEffect(() => {
+    const handleCartUpdate = () => {
+      console.log('🛒 Header: cartUpdated event received!')
+      // Add small delay to ensure backend has processed the update
+      setTimeout(() => {
+        fetchCartCount()
+      }, 200)
+    }
+    
+    // Add a function to check if we should skip API call
+    const shouldSkipApiCall = () => {
+      const storedCount = sessionStorage.getItem('cartCount')
+      return storedCount && parseInt(storedCount) > 0
+    }
+    
+    // Also listen for sessionStorage changes
+    const handleStorageChange = (e) => {
+      if (e.key === 'cartCount') {
+        console.log('🛒 Header: sessionStorage cartCount changed to:', e.newValue)
+        if (e.newValue) {
+          setCartCount(parseInt(e.newValue))
+        }
+      }
+    }
+    
+    window.addEventListener('storage', handleStorageChange)
+    
+    // Also listen for custom cart sync events
+    const handleCartSync = () => {
+      console.log('🛒 Header: Cart sync event received!')
+      syncCartCount()
+    }
+    
+    window.addEventListener('cartSync', handleCartSync)
+    
+    // Also listen for force sync events
+    const handleForceSync = () => {
+      console.log('🛒 Header: Force sync event received!')
+      forceSyncFromSessionStorage()
+    }
+    
+    window.addEventListener('forceCartSync', handleForceSync)
+
+    // Listen for cart updates from any component
+    window.addEventListener('cartUpdated', handleCartUpdate)
+    console.log('🛒 Header: Added cartUpdated event listener')
+    
+    // Also listen for cart updates when cart modal is open/closed
+    const handleCartModalChange = () => {
+      console.log('🛒 Header: Cart modal change event received!')
+      // Small delay to ensure cart data is updated
+      setTimeout(() => {
+        // Skip API call if we have sessionStorage count
+        if (shouldSkipApiCall()) {
+          console.log('🛒 Header: Skipping API call on modal change, using sessionStorage count')
+          const storedCount = sessionStorage.getItem('cartCount')
+          if (storedCount) {
+            setCartCount(parseInt(storedCount))
+          }
+          return
+        }
+        
+        fetchCartCount()
+      }, 100)
+    }
+    
+    window.addEventListener('cartModalOpened', handleCartModalChange)
+    window.addEventListener('cartModalClosed', handleCartModalChange)
+    
+    // Poll cart count every 30 seconds as backup (reduced frequency)
+    const pollInterval = setInterval(() => {
+      console.log('🛒 Header: Polling cart count...')
+      
+      // Skip API call if we have sessionStorage count
+      if (shouldSkipApiCall()) {
+        console.log('🛒 Header: Skipping API call, using sessionStorage count')
+        const storedCount = sessionStorage.getItem('cartCount')
+        if (storedCount) {
+          setCartCount(parseInt(storedCount))
+        }
+        return
+      }
+      
+      fetchCartCount()
+    }, 30000)
+    
+    return () => {
+      window.removeEventListener('cartUpdated', handleCartUpdate)
+      window.removeEventListener('cartModalOpened', handleCartModalChange)
+      window.removeEventListener('cartModalClosed', handleCartModalChange)
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('cartSync', handleCartSync)
+      window.removeEventListener('forceCartSync', handleForceSync)
+      clearInterval(pollInterval)
+      console.log('🛒 Header: Removed event listeners and polling')
+    }
+  }, [])
+
+  // Handle cart button click
+  const handleCartClick = () => {
+    setIsCartOpen(true)
+    // Dispatch cart modal opened event
+    window.dispatchEvent(new CustomEvent('cartModalOpened'))
+  }
+
+  // Handle cart close
+  const handleCartClose = () => {
+    setIsCartOpen(false)
+    // Dispatch cart modal closed event
+    window.dispatchEvent(new CustomEvent('cartModalClosed'))
+  }
 
   return (
     <header>
@@ -77,7 +338,7 @@ const Header = ({ onAuthClick }) => {
                       >
                         <ion-icon name="person-outline"></ion-icon>
                       </button>
-                      <span className="user-name">{user?.full_name || user?.username}</span>
+                      <span className="user-name">{user?.full_name || user?.email}</span>
                     </div>
                     
                     <button className="action-btn logout-btn" onClick={logout}>
@@ -98,9 +359,9 @@ const Header = ({ onAuthClick }) => {
                       <span className="count">0</span>
                     </button>
 
-                    <button className="action-btn">
+                    <button className="action-btn" onClick={handleCartClick}>
                       <ion-icon name="bag-handle-outline"></ion-icon>
-                      <span className="count">0</span>
+                      <span className="count">{cartCount}</span>
                     </button>
                   </>
                 )}
@@ -268,9 +529,9 @@ const Header = ({ onAuthClick }) => {
           <span className="count">0</span>
         </button>
 
-        <button className="action-btn">
+        <button className="action-btn" onClick={handleCartClick}>
           <ion-icon name="bag-handle-outline"></ion-icon>
-          <span className="count">0</span>
+          <span className="count">{cartCount}</span>
         </button>
       </div>
       )}
@@ -388,6 +649,12 @@ const Header = ({ onAuthClick }) => {
           </ul>
         </div>
       </nav>
+
+      {/* Cart Popup */}
+      <CartPage 
+        isOpen={isCartOpen} 
+        onClose={handleCartClose}
+      />
     </header>
   )
 }

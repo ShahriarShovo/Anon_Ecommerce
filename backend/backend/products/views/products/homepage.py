@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
 
-from products.models import Product, ProductImage
+from products.models import Product, ProductImage, ProductReview
 from products.serializers import ProductListSerializer
 
 
@@ -16,10 +16,10 @@ def homepage_products(request):
     Returns: image, category name, product name, price
     """
     try:
-        # Get active products with images
+        # Get active products with images and reviews
         products = Product.objects.filter(
             status='active'
-        ).select_related('category').prefetch_related('images').order_by('-created_at')[:12]
+        ).select_related('category').prefetch_related('images', 'reviews').order_by('-created_at')[:12]
         
         # Prepare response data
         products_data = []
@@ -39,6 +39,16 @@ def homepage_products(request):
                     # Add domain for relative URLs
                     image_url = f"http://127.0.0.1:8000{primary_image.image_url}"
             
+            # Calculate average rating from reviews
+            approved_reviews = product.reviews.filter(is_approved=True)
+            average_rating = 0.0
+            review_count = 0
+            
+            if approved_reviews.exists():
+                total_rating = sum(review.rating for review in approved_reviews)
+                review_count = approved_reviews.count()
+                average_rating = round(total_rating / review_count, 1)
+            
             product_data = {
                 'id': product.id,
                 'title': product.title,
@@ -48,6 +58,8 @@ def homepage_products(request):
                 'category_name': product.category.name if product.category else None,
                 'image_url': image_url,
                 'image_alt': primary_image.alt_text if primary_image else product.title,
+                'average_rating': average_rating,
+                'review_count': review_count,
             }
             products_data.append(product_data)
         

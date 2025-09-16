@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cart Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 5px; }
+        button:hover { background: #0056b3; }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+        .info { color: blue; }
+        .warning { color: orange; }
+        #results { margin-top: 20px; max-height: 400px; overflow-y: auto; background: #f8f9fa; padding: 15px; border-radius: 5px; }
+        .log-entry { margin: 5px 0; padding: 5px; border-left: 3px solid #ccc; }
+        .log-success { border-left-color: green; }
+        .log-error { border-left-color: red; }
+        .log-info { border-left-color: blue; }
+        .log-warning { border-left-color: orange; }
+        .cart-counter { display: inline-block; background: #dc3545; color: white; padding: 2px 8px; border-radius: 10px; margin-left: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛒 Cart Debug Test</h1>
+        <p>This page tests the cart functionality step by step to identify issues.</p>
+        
+        <div class="test-section">
+            <h3>📊 Current Status</h3>
+            <p>Cart Count: <span id="cart-count" class="cart-counter">0</span></p>
+            <p>Session Status: <span id="session-status">Unknown</span></p>
+        </div>
+        
+        <div class="test-section">
+            <h3>1️⃣ Test Products</h3>
+            <button onclick="testGetProducts()">Get Available Products</button>
+            <div id="products-list"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>2️⃣ Test Add to Cart</h3>
+            <button onclick="testAddToCart(9)">Add Product ID 9</button>
+            <button onclick="testAddToCart(10)">Add Product ID 10</button>
+            <button onclick="testAddToCart(11)">Add Product ID 11</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>3️⃣ Test Cart Data</h3>
+            <button onclick="testGetCart()">Get Cart Data</button>
+            <button onclick="testCartCount()">Get Cart Count Only</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>4️⃣ Test Session</h3>
+            <button onclick="testSession()">Check Session</button>
+            <button onclick="clearSession()">Clear Session</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>5️⃣ Simulate Frontend Events</h3>
+            <button onclick="simulateCartUpdated()">Simulate cartUpdated Event</button>
+            <button onclick="testEventListeners()">Test Event Listeners</button>
+        </div>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://127.0.0.1:8000';
+        let currentCartCount = 0;
+        
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `log-entry log-${type}`;
+            div.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            results.appendChild(div);
+            results.scrollTop = results.scrollHeight;
+            console.log(message);
+        }
+        
+        function updateCartCounter(count) {
+            currentCartCount = count;
+            document.getElementById('cart-count').textContent = count;
+            log(`Cart counter updated to: ${count}`, 'success');
+        }
+        
+        async function makeRequest(endpoint, options = {}) {
+            const url = `${API_BASE_URL}${endpoint}`;
+            
+            const config = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...options.headers,
+                },
+                credentials: 'include',
+                ...options,
+            };
+            
+            try {
+                log(`🌐 Making request to: ${url}`, 'info');
+                const response = await fetch(url, config);
+                const data = await response.json();
+                
+                log(`🌐 Response status: ${response.status}`, response.ok ? 'success' : 'error');
+                log(`🌐 Response data: ${JSON.stringify(data, null, 2)}`, 'info');
+                
+                if (!response.ok) {
+                    throw new Error(data.message || `HTTP error! status: ${response.status}`);
+                }
+                
+                return data;
+            } catch (error) {
+                log(`🌐 Request failed: ${error.message}`, 'error');
+                throw error;
+            }
+        }
+        
+        async function testGetProducts() {
+            try {
+                log('📦 Testing product availability...', 'info');
+                const response = await makeRequest('/api/products/homepage/');
+                
+                if (response.success && response.products) {
+                    const products = response.products;
+                    log(`✅ Found ${products.length} products`, 'success');
+                    
+                    const productsList = document.getElementById('products-list');
+                    productsList.innerHTML = '<h4>Available Products:</h4>';
+                    
+                    products.forEach(product => {
+                        const div = document.createElement('div');
+                        div.innerHTML = `
+                            <strong>ID ${product.id}:</strong> ${product.title} - $${product.price}
+                            <button onclick="testAddToCart(${product.id})" style="margin-left: 10px; padding: 5px 10px; font-size: 12px;">Add to Cart</button>
+                        `;
+                        productsList.appendChild(div);
+                    });
+                } else {
+                    log('❌ Failed to get products', 'error');
+                }
+            } catch (error) {
+                log(`❌ Product test error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testAddToCart(productId) {
+            try {
+                log(`🛒 Testing add to cart for product ID: ${productId}`, 'info');
+                
+                const response = await makeRequest('/api/cart/add/', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        product_id: productId,
+                        quantity: 1
+                    })
+                });
+                
+                if (response.success) {
+                    log(`✅ Successfully added product ${productId} to cart`, 'success');
+                    log(`Cart item ID: ${response.cart_item?.id}`, 'info');
+                    log(`Cart total items: ${response.cart?.total_items}`, 'info');
+                    
+                    // Update cart counter
+                    updateCartCounter(response.cart?.total_items || 0);
+                    
+                    // Simulate the cartUpdated event
+                    setTimeout(() => {
+                        simulateCartUpdated();
+                    }, 500);
+                } else {
+                    log(`❌ Failed to add to cart: ${response.error}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Add to cart error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testGetCart() {
+            try {
+                log('🛒 Testing get cart...', 'info');
+                const response = await makeRequest('/api/cart/');
+                
+                if (response.success) {
+                    const cart = response.cart;
+                    log(`✅ Cart retrieved successfully`, 'success');
+                    log(`Cart ID: ${cart.id}`, 'info');
+                    log(`Total items: ${cart.total_items}`, 'info');
+                    log(`Subtotal: $${cart.subtotal}`, 'info');
+                    log(`Items count: ${cart.items?.length || 0}`, 'info');
+                    
+                    // Update cart counter
+                    updateCartCounter(cart.total_items || 0);
+                    
+                    if (cart.items && cart.items.length > 0) {
+                        cart.items.forEach((item, index) => {
+                            log(`Item ${index + 1}: ${item.product?.title} x${item.quantity} = $${item.total_price}`, 'info');
+                        });
+                    } else {
+                        log('Cart is empty', 'warning');
+                    }
+                } else {
+                    log(`❌ Failed to get cart: ${response.error}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Get cart error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testCartCount() {
+            try {
+                log('📊 Testing cart count...', 'info');
+                const response = await makeRequest('/api/cart/');
+                
+                if (response.success) {
+                    const count = response.cart?.total_items || 0;
+                    log(`✅ Cart count: ${count}`, 'success');
+                    updateCartCounter(count);
+                } else {
+                    log(`❌ Failed to get cart count: ${response.error}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Cart count error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testSession() {
+            try {
+                log('🔐 Testing session...', 'info');
+                const response = await makeRequest('/api/cart/');
+                
+                if (response.success) {
+                    const sessionKey = response.cart?.session_key;
+                    log(`✅ Session key: ${sessionKey}`, 'success');
+                    log(`✅ Cookies are being sent properly`, 'success');
+                    document.getElementById('session-status').textContent = 'Active';
+                    document.getElementById('session-status').className = 'success';
+                } else {
+                    log(`❌ Session test failed: ${response.error}`, 'error');
+                    document.getElementById('session-status').textContent = 'Failed';
+                    document.getElementById('session-status').className = 'error';
+                }
+            } catch (error) {
+                log(`❌ Session test error: ${error.message}`, 'error');
+                document.getElementById('session-status').textContent = 'Error';
+                document.getElementById('session-status').className = 'error';
+            }
+        }
+        
+        function clearSession() {
+            log('🗑️ Clearing session...', 'warning');
+            // Clear all cookies
+            document.cookie.split(";").forEach(function(c) { 
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+            });
+            updateCartCounter(0);
+            document.getElementById('session-status').textContent = 'Cleared';
+            document.getElementById('session-status').className = 'warning';
+            log('✅ Session cleared', 'success');
+        }
+        
+        function simulateCartUpdated() {
+            log('📡 Simulating cartUpdated event...', 'info');
+            const event = new CustomEvent('cartUpdated');
+            window.dispatchEvent(event);
+            log('✅ cartUpdated event dispatched', 'success');
+        }
+        
+        function testEventListeners() {
+            log('👂 Testing event listeners...', 'info');
+            
+            // Add a test event listener
+            const testHandler = () => {
+                log('✅ Event listener is working!', 'success');
+            };
+            
+            window.addEventListener('cartUpdated', testHandler);
+            log('✅ Added test event listener', 'success');
+            
+            // Dispatch test event
+            setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('cartUpdated'));
+                window.removeEventListener('cartUpdated', testHandler);
+                log('✅ Removed test event listener', 'success');
+            }, 1000);
+        }
+        
+        // Auto-test on page load
+        window.addEventListener('load', () => {
+            log('🚀 Cart Debug Test Page Loaded', 'success');
+            log('Click the buttons above to test cart functionality', 'info');
+            
+            // Initial cart count check
+            setTimeout(() => {
+                testCartCount();
+                testSession();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

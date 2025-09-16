@@ -5,6 +5,7 @@ const ProductGrid = () => {
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [addingToCart, setAddingToCart] = useState({}) // Track which product is being added
 
   useEffect(() => {
     fetchProducts()
@@ -27,6 +28,48 @@ const ProductGrid = () => {
       setProducts(getStaticProducts())
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Add to cart function
+  const handleAddToCart = async (productId, productTitle) => {
+    try {
+      console.log('🛒 ProductGrid: Adding to cart - Product ID:', productId, 'Title:', productTitle)
+      setAddingToCart(prev => ({ ...prev, [productId]: true }))
+      
+      const response = await apiService.addToCart(productId, 1)
+      console.log('🛒 ProductGrid: Add to cart API response:', response)
+      
+      if (response.success) {
+        // Update sessionStorage
+        const currentCount = parseInt(sessionStorage.getItem('cartCount') || '0')
+        sessionStorage.setItem('cartCount', (currentCount + 1).toString())
+        console.log('🛒 ProductGrid: Updated sessionStorage cart count to:', currentCount + 1)
+        
+        // Show success message
+        alert(`${productTitle} added to cart successfully!`)
+        
+        // Dispatch cart update event to update header counter
+        console.log('🛒 ProductGrid: Dispatching cartUpdated event...')
+        window.dispatchEvent(new CustomEvent('cartUpdated'))
+        
+        // Also dispatch cart sync event
+        console.log('🛒 ProductGrid: Dispatching cartSync event...')
+        window.dispatchEvent(new CustomEvent('cartSync'))
+        
+        // Also dispatch force sync event
+        console.log('🛒 ProductGrid: Dispatching forceCartSync event...')
+        window.dispatchEvent(new CustomEvent('forceCartSync'))
+        
+        console.log('🛒 ProductGrid: Item added to cart:', response.cart_item)
+      } else {
+        throw new Error(response.error || 'Failed to add to cart')
+      }
+    } catch (error) {
+      console.error('🛒 ProductGrid: Error adding to cart:', error)
+      alert(`Failed to add ${productTitle} to cart: ${error.message}`)
+    } finally {
+      setAddingToCart(prev => ({ ...prev, [productId]: false }))
     }
   }
 
@@ -168,6 +211,30 @@ const ProductGrid = () => {
     return `$${parseFloat(price).toFixed(2)}`
   }
 
+  const renderStars = (rating) => {
+    const stars = []
+    const fullStars = Math.floor(rating)
+    const hasHalfStar = rating % 1 !== 0
+    
+    // Full stars
+    for (let i = 0; i < fullStars; i++) {
+      stars.push(<ion-icon key={i} name="star"></ion-icon>)
+    }
+    
+    // Half star
+    if (hasHalfStar) {
+      stars.push(<ion-icon key="half" name="star-half"></ion-icon>)
+    }
+    
+    // Empty stars
+    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0)
+    for (let i = 0; i < emptyStars; i++) {
+      stars.push(<ion-icon key={`empty-${i}`} name="star-outline"></ion-icon>)
+    }
+    
+    return stars
+  }
+
   if (loading) {
     return (
       <div style={{ 
@@ -236,8 +303,13 @@ const ProductGrid = () => {
               <button className="btn-action">
                 <ion-icon name="repeat-outline"></ion-icon>
               </button>
-              <button className="btn-action">
-                <ion-icon name="bag-add-outline"></ion-icon>
+              <button 
+                className="btn-action"
+                onClick={() => handleAddToCart(product.id, product.title)}
+                disabled={addingToCart[product.id]}
+                title="Add to Cart"
+              >
+                <ion-icon name={addingToCart[product.id] ? "hourglass-outline" : "bag-add-outline"}></ion-icon>
               </button>
             </div>
           </div>
@@ -252,11 +324,10 @@ const ProductGrid = () => {
               </a>
             </h3>
             <div className="showcase-rating">
-              <ion-icon name="star"></ion-icon>
-              <ion-icon name="star"></ion-icon>
-              <ion-icon name="star"></ion-icon>
-              <ion-icon name="star"></ion-icon>
-              <ion-icon name="star-half"></ion-icon>
+              {renderStars(product.average_rating || 0)}
+              {product.review_count > 0 && (
+                <span className="rating-text">({product.review_count})</span>
+              )}
             </div>
             <div className="price-box">
               <p className="price">

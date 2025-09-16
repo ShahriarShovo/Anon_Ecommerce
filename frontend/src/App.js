@@ -29,6 +29,15 @@ function App() {
       <AuthProvider>
         <CategoriesProvider>
           <div className="App">
+            {/* Overlay */}
+            <div className="overlay" data-overlay></div>
+
+            {/* Auth Modal */}
+            <LoginModal 
+              isOpen={isAuthModalOpen} 
+              onClose={() => setIsAuthModalOpen(false)} 
+            />
+
             <Header onAuthClick={() => setIsAuthModalOpen(true)} />
             <SingleProduct />
             <Footer />
@@ -45,6 +54,15 @@ function App() {
       <AuthProvider>
         <CategoriesProvider>
           <div className="App">
+            {/* Overlay */}
+            <div className="overlay" data-overlay></div>
+
+            {/* Auth Modal */}
+            <LoginModal 
+              isOpen={isAuthModalOpen} 
+              onClose={() => setIsAuthModalOpen(false)} 
+            />
+
             <Header onAuthClick={() => setIsAuthModalOpen(true)} />
             <UserDashboard />
             <Footer />
@@ -61,6 +79,15 @@ function App() {
       <AuthProvider>
         <CategoriesProvider>
           <div className="App">
+            {/* Overlay */}
+            <div className="overlay" data-overlay></div>
+
+            {/* Auth Modal */}
+            <LoginModal 
+              isOpen={isAuthModalOpen} 
+              onClose={() => setIsAuthModalOpen(false)} 
+            />
+
             <Header onAuthClick={() => setIsAuthModalOpen(true)} />
             <AdminDashboard />
             <Footer />
@@ -76,6 +103,15 @@ function App() {
       <AuthProvider>
         <CategoriesProvider>
           <div className="App">
+            {/* Overlay */}
+            <div className="overlay" data-overlay></div>
+
+            {/* Auth Modal */}
+            <LoginModal 
+              isOpen={isAuthModalOpen} 
+              onClose={() => setIsAuthModalOpen(false)} 
+            />
+
             <Header onAuthClick={() => setIsAuthModalOpen(true)} />
             <ProfilePage />
             <Footer />

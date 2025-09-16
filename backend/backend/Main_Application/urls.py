@@ -13,6 +13,8 @@ def api_info(request):
         'status': 'active',
         'endpoints': {
             'products': '/api/products/',
+            'cart': '/api/cart/',
+            'wishlist': '/api/wishlist/',
             'accounts': '/accounts/',
             'admin': '/admin/',
             'api_docs': '/docs/'
@@ -22,6 +24,18 @@ def api_info(request):
             'detail': '/api/products/product/{slug}/',
             'categories': '/api/products/category/',
             'subcategories': '/api/products/subcategory/'
+        },
+        'cart_endpoints': {
+            'add_item': '/api/cart/add/',
+            'get_cart': '/api/cart/',
+            'increase_quantity': '/api/cart/items/{id}/increase/',
+            'decrease_quantity': '/api/cart/items/{id}/decrease/',
+            'clear_cart': '/api/cart/clear/'
+        },
+        'wishlist_endpoints': {
+            'add_item': '/api/wishlist/add/',
+            'get_wishlist': '/api/wishlist/',
+            'remove_item': '/api/wishlist/items/{id}/remove/'
         }
     })
 
@@ -38,6 +52,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('accounts.urls')),
     path('api/products/', include('products.urls')),
+    path('api/', include('cart.urls')),  # Cart and Wishlist APIs
 ]
 
 # Serve media files during development

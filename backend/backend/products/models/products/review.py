@@ -44,16 +44,15 @@ class ProductReview(models.Model):
         ]
     
     def __str__(self):
-        user_display = self.user_name or (self.user.username if self.user else 'Anonymous')
+        user_display = self.user_name or (self.user.email if self.user else 'Anonymous')
         return f"{self.product.title} - {user_display} - {self.rating} stars"
     
     @property
     def display_name(self):
         """Get display name for the reviewer"""
-        if self.user and self.user.full_name:
-            return self.user.full_name
-        elif self.user:
-            return self.user.username
+        if self.user:
+            # User model uses email as username, so return email
+            return self.user.email
         elif self.user_name:
             return self.user_name
         else:
