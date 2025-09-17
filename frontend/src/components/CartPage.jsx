@@ -1,223 +1,98 @@
-import React, { useState, useEffect } from 'react'
-import apiService from '../services/api'
+import React, { useState, useEffect } from "react"
+import apiService from "../services/api"
 
 const CartPage = ({ isOpen, onClose }) => {
   const [cart, setCart] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [updatingItems, setUpdatingItems] = useState({})
-  const [pendingUpdates, setPendingUpdates] = useState({})
 
-  // Fetch cart data
-  const fetchCart = async () => {
-    try {
-      console.log('🛒 CartPage: Fetching cart data...')
-      setLoading(true)
-      const response = await apiService.getCart()
-      console.log('🛒 CartPage: Cart API response:', response)
-      
-      if (response.success) {
-        console.log('🛒 CartPage: Setting cart data:', response.cart)
-        console.log('🛒 CartPage: Cart items:', response.cart?.items?.length || 0)
-        console.log('🛒 CartPage: Cart total_items:', response.cart?.total_items)
-        console.log('🛒 CartPage: Cart subtotal:', response.cart?.subtotal)
-        
-        // Check if cart has items
-        if (response.cart?.items && response.cart.items.length > 0) {
-          console.log('🛒 CartPage: Cart has items:', response.cart.items)
-        } else {
-          console.log('🛒 CartPage: Cart is empty')
-          
-          // Check if sessionStorage has cart count
-          const storedCount = sessionStorage.getItem('cartCount')
-          if (storedCount && parseInt(storedCount) > 0) {
-            console.log('🛒 CartPage: SessionStorage has count but API shows empty cart')
-            console.log('🛒 CartPage: This indicates session mismatch between frontend and backend')
-            
-            // Create a mock cart with items from sessionStorage
-            const mockCart = {
-              id: response.cart?.id || 'mock',
-              total_items: parseInt(storedCount),
-              subtotal: 0,
-              items: []
-            }
-            
-            console.log('🛒 CartPage: Using mock cart with count:', mockCart.total_items)
-            console.log('🛒 CartPage: Session mismatch - frontend has items but backend cart is empty')
-            console.log('🛒 CartPage: This is a temporary solution until session sync is fixed')
-            setCart(mockCart)
-            return
-          }
-        }
-        
-        setCart(response.cart)
-      } else {
-        throw new Error(response.error || 'Failed to fetch cart')
-      }
-    } catch (error) {
-      console.error('🛒 CartPage: Error fetching cart:', error)
-      setError('Failed to load cart')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Load cart when component opens
+  // Fetch cart
   useEffect(() => {
     if (isOpen) {
-      console.log('🛒 CartPage: Cart modal opened, fetching cart...')
-      
-      // First check sessionStorage
-      const storedCount = sessionStorage.getItem('cartCount')
-      if (storedCount && parseInt(storedCount) > 0) {
-        console.log('🛒 CartPage: SessionStorage has cart count:', storedCount)
+      const fetchCart = async () => {
+        setLoading(true)
+        try {
+          const response = await apiService.getCart()
+          if (response.success) {
+            setCart(response.cart)
+          } else {
+            setError("Failed to load cart")
+          }
+        } catch (err) {
+          setError("Failed to load cart")
+        } finally {
+          setLoading(false)
+        }
       }
-      
       fetchCart()
     }
   }, [isOpen])
 
-  // Handle quantity increase (optimized with debouncing)
-  const handleIncreaseQuantity = (itemId) => {
-    console.log('🛒 CartPage: Increasing quantity for item:', itemId)
-    
-    // Optimistically update UI
-    setCart(prevCart => {
-      if (!prevCart || !prevCart.items) return prevCart
-      
-      const updatedItems = prevCart.items.map(item => {
-        if (item.id === itemId) {
-          return { ...item, quantity: item.quantity + 1 }
-        }
-        return item
-      })
-      
-      return {
-        ...prevCart,
-        items: updatedItems,
-        total_items: updatedItems.reduce((sum, item) => sum + item.quantity, 0)
-      }
-    })
-    
-    // Debounced API call
-    debouncedUpdate(itemId, 'increase')
-  }
-
-  // Handle quantity decrease (optimized with debouncing)
-  const handleDecreaseQuantity = (itemId) => {
-    console.log('🛒 CartPage: Decreasing quantity for item:', itemId)
-    
-    // Optimistically update UI
-    setCart(prevCart => {
-      if (!prevCart || !prevCart.items) return prevCart
-      
-      const updatedItems = prevCart.items.map(item => {
-        if (item.id === itemId && item.quantity > 1) {
-          return { ...item, quantity: item.quantity - 1 }
-        }
-        return item
-      })
-      
-      return {
-        ...prevCart,
-        items: updatedItems,
-        total_items: updatedItems.reduce((sum, item) => sum + item.quantity, 0)
-      }
-    })
-    
-    // Debounced API call
-    debouncedUpdate(itemId, 'decrease')
-  }
-
-  // Debounced update function
-  const debouncedUpdate = (itemId, action) => {
-    // Clear existing timeout for this item
-    if (pendingUpdates[itemId]) {
-      clearTimeout(pendingUpdates[itemId])
-    }
-
-    // Set new timeout
-    const timeoutId = setTimeout(async () => {
-      setUpdatingItems(prev => ({ ...prev, [itemId]: true }))
-      try {
-        let response
-        if (action === 'increase') {
-          response = await apiService.increaseCartItemQuantity(itemId)
-        } else if (action === 'decrease') {
-          response = await apiService.decreaseCartItemQuantity(itemId)
-        }
-        
-        if (response.success) {
-          setCart(response.cart)
-          
-          // Update sessionStorage
-          const newCount = response.cart?.total_items || 0
-          sessionStorage.setItem('cartCount', newCount.toString())
-          console.log('🛒 CartPage: Updated sessionStorage cart count to:', newCount)
-          
-          // Dispatch cart update event to update header counter
-          window.dispatchEvent(new CustomEvent('cartUpdated'))
-          
-          // Also dispatch cart sync event
-          console.log('🛒 CartPage: Dispatching cartSync event...')
-          window.dispatchEvent(new CustomEvent('cartSync'))
-          
-          // Also dispatch force sync event
-          console.log('🛒 CartPage: Dispatching forceCartSync event...')
-          window.dispatchEvent(new CustomEvent('forceCartSync'))
-        } else {
-          throw new Error(response.error || 'Failed to update quantity')
-        }
-      } catch (error) {
-        console.error(`Error ${action}ing quantity:`, error)
-        alert(`Failed to update quantity: ${error.message}`)
-        // Refresh cart to get correct state
-        fetchCart()
-      } finally {
-        setUpdatingItems(prev => ({ ...prev, [itemId]: false }))
-        setPendingUpdates(prev => {
-          const newPending = { ...prev }
-          delete newPending[itemId]
-          return newPending
-        })
-      }
-    }, 500) // 500ms debounce delay
-
-    setPendingUpdates(prev => ({ ...prev, [itemId]: timeoutId }))
-  }
-
-  // Handle remove item (set quantity to 0)
-  const handleRemoveItem = async (itemId) => {
-    if (!window.confirm('Are you sure you want to remove this item from your cart?')) {
-      return
-    }
-
+  // Handle quantity increase
+  const handleIncreaseQuantity = async (itemId) => {
     try {
       setUpdatingItems(prev => ({ ...prev, [itemId]: true }))
-      
-      // Call decrease quantity until quantity reaches 0
-      const response = await apiService.decreaseCartItemQuantity(itemId)
-      
+      const response = await apiService.increaseCartItemQuantity(itemId)
       if (response.success) {
         setCart(response.cart)
-        
         // Update sessionStorage
-        const newCount = response.cart?.total_items || 0
-        sessionStorage.setItem('cartCount', newCount.toString())
-        console.log('🛒 CartPage: Updated sessionStorage cart count to:', newCount)
-        
-        // Dispatch cart update event
+        sessionStorage.setItem('cartCount', response.cart.total_items.toString())
+        // Dispatch cart updated event
         window.dispatchEvent(new CustomEvent('cartUpdated'))
-        window.dispatchEvent(new CustomEvent('cartSync'))
-        window.dispatchEvent(new CustomEvent('forceCartSync'))
-        
-        alert('Item removed from cart successfully!')
       } else {
-        throw new Error(response.error || 'Failed to remove item')
+        alert('Failed to update quantity')
+      }
+    } catch (error) {
+      console.error('Error increasing quantity:', error)
+      alert('Failed to update quantity')
+    } finally {
+      setUpdatingItems(prev => ({ ...prev, [itemId]: false }))
+    }
+  }
+
+  // Handle quantity decrease
+  const handleDecreaseQuantity = async (itemId) => {
+    try {
+      setUpdatingItems(prev => ({ ...prev, [itemId]: true }))
+      const response = await apiService.decreaseCartItemQuantity(itemId)
+      if (response.success) {
+        setCart(response.cart)
+        // Update sessionStorage
+        sessionStorage.setItem('cartCount', response.cart.total_items.toString())
+        // Dispatch cart updated event
+        window.dispatchEvent(new CustomEvent('cartUpdated'))
+      } else {
+        alert('Failed to update quantity')
+      }
+    } catch (error) {
+      console.error('Error decreasing quantity:', error)
+      alert('Failed to update quantity')
+    } finally {
+      setUpdatingItems(prev => ({ ...prev, [itemId]: false }))
+    }
+  }
+
+  // Handle remove item
+  const handleRemoveItem = async (itemId) => {
+    if (!window.confirm('Are you sure you want to remove this item?')) return
+    
+    try {
+      setUpdatingItems(prev => ({ ...prev, [itemId]: true }))
+      const response = await apiService.removeCartItem(itemId)
+      if (response.success) {
+        setCart(response.cart)
+        // Update sessionStorage
+        sessionStorage.setItem('cartCount', response.cart.total_items.toString())
+        // Dispatch cart updated event
+        window.dispatchEvent(new CustomEvent('cartUpdated'))
+        alert('Item removed successfully!')
+      } else {
+        alert('Failed to remove item')
       }
     } catch (error) {
       console.error('Error removing item:', error)
-      alert(`Failed to remove item: ${error.message}`)
+      alert('Failed to remove item')
     } finally {
       setUpdatingItems(prev => ({ ...prev, [itemId]: false }))
     }
@@ -225,70 +100,39 @@ const CartPage = ({ isOpen, onClose }) => {
 
   // Handle clear cart
   const handleClearCart = async () => {
-    if (!window.confirm('Are you sure you want to clear your cart?')) {
-      return
-    }
-
+    if (!window.confirm('Are you sure you want to clear your entire cart?')) return
+    
     try {
       setLoading(true)
       const response = await apiService.clearCart()
-      
       if (response.success) {
-        setCart(null)
-        
+        setCart({ ...cart, items: [], total_items: 0, subtotal: 0 })
         // Update sessionStorage
         sessionStorage.setItem('cartCount', '0')
-        console.log('🛒 CartPage: Cleared sessionStorage cart count')
-        
-        // Dispatch cart update event to update header counter
+        // Dispatch cart updated event
         window.dispatchEvent(new CustomEvent('cartUpdated'))
-        
-        // Also dispatch cart sync event
-        console.log('🛒 CartPage: Dispatching cartSync event...')
-        window.dispatchEvent(new CustomEvent('cartSync'))
-        
-        // Also dispatch force sync event
-        console.log('🛒 CartPage: Dispatching forceCartSync event...')
-        window.dispatchEvent(new CustomEvent('forceCartSync'))
         alert('Cart cleared successfully!')
       } else {
-        throw new Error(response.error || 'Failed to clear cart')
+        alert('Failed to clear cart')
       }
     } catch (error) {
       console.error('Error clearing cart:', error)
-      alert(`Failed to clear cart: ${error.message}`)
+      alert('Failed to clear cart')
     } finally {
       setLoading(false)
     }
   }
 
-  // Handle checkout
-  const handleCheckout = () => {
-    alert('Checkout functionality will be implemented soon!')
-  }
-
-  // Format price
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(price)
-  }
-
   // Get product image
   const getProductImage = (item) => {
-    // Check if product has primary_image from ProductListSerializer
     if (item.product && item.product.primary_image) {
       const primaryImage = item.product.primary_image
       if (primaryImage.image_url) {
-        // If it's already a full URL, return as is
         if (primaryImage.image_url.startsWith('http')) {
           return primaryImage.image_url
         }
-        // If it's a relative path, make it full URL
         return `http://127.0.0.1:8000${primaryImage.image_url}`
       }
-      // Fallback to image field if image_url is not available
       if (primaryImage.image) {
         if (primaryImage.image.startsWith('http')) {
           return primaryImage.image
@@ -296,198 +140,325 @@ const CartPage = ({ isOpen, onClose }) => {
         return `http://127.0.0.1:8000${primaryImage.image}`
       }
     }
-    
-    // Fallback to static image
     return "/assets/images/products/1.jpg"
+  }
+
+  // Format price in BDT
+  const formatPrice = (amount) => {
+    const safeAmount = Number(amount || 0)
+    try {
+      return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT', minimumFractionDigits: 0 }).format(safeAmount)
+    } catch (e) {
+      return `৳${safeAmount.toLocaleString('en-BD')}`
+    }
   }
 
   if (!isOpen) return null
 
   return (
-    <div className={`cart-overlay ${isOpen ? 'active' : ''}`} onClick={onClose}>
-      <div className="cart-popup" onClick={(e) => e.stopPropagation()}>
-        {/* Modern Cart Header */}
-        <div className="cart-header">
-          <div className="cart-header-left">
-            <div className="cart-icon">
-              <ion-icon name="bag-handle-outline"></ion-icon>
-            </div>
-            <div className="cart-title-section">
-              <h2 className="cart-title">Shopping Cart</h2>
-              {cart && cart.total_items > 0 && (
-                <p className="cart-subtitle">{cart.total_items} {cart.total_items === 1 ? 'item' : 'items'}</p>
-              )}
-            </div>
-          </div>
-          <button className="cart-close" onClick={onClose}>
-            <ion-icon name="close-outline"></ion-icon>
-          </button>
-        </div>
+    <>
+      {/* CSS */}
+      <style>
+        {`
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          .checkout-container {
+            background: #fff;
+            border-radius: 12px;
+            padding: 10px;
+            width: 100%;
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+          }
+          h2 { font-size: 20px; margin-bottom: 20px; }
+          .order-item {
+            display: flex; align-items: center; gap: 15px;
+            padding: 15px 0; border-bottom: 1px solid #eee;
+          }
+          .order-item img {
+            width: 80px; height: 80px; object-fit: cover;
+            border-radius: 8px; background: #f3f4f6;
+          }
+          .item-info { flex: 1; }
+          .item-info h4 { font-size: 15px; font-weight: bold; margin-bottom: 5px; }
+          .item-actions { margin-top: 8px; }
+          .remove-btn { 
+            background: none; 
+            border: none; 
+            color: #ef4444; 
+            font-size: 12px; 
+            cursor: pointer; 
+            text-decoration: underline;
+            padding: 0;
+          }
+          .remove-btn:hover { color: #dc2626; }
+          .clear-cart-btn { 
+            background: #ef4444; 
+            color: #fff; 
+            border: none; 
+            padding: 8px 16px; 
+            border-radius: 6px; 
+            font-size: 12px; 
+            cursor: pointer; 
+            margin-top: 10px;
+            font-weight: 500;
+            height: 36px;
+          }
+          .clear-cart-btn:hover { background: #dc2626; }
+          .clear-cart-btn:disabled { background: #9ca3af; cursor: not-allowed; }
+          .continue-shopping-btn { 
+            background: #6366f1; 
+            color: #fff; 
+            padding: 12px 20px; 
+            border-radius: 30px; 
+            font-size: 14px; 
+            border: none; 
+            cursor: pointer; 
+            width: 100%;
+            margin-top: 5px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .continue-shopping-btn:hover { background: #4f46e5; }
+          .order-price { font-weight: bold; color: #2563eb; font-size: 14px; margin-bottom: 10px; }
+          .qty-control { display: flex; align-items: center; border: 1px solid #ddd; border-radius: 6px; overflow: hidden; }
+          .qty-control button { background: #f9fafb; border: none; padding: 4px 10px; cursor: pointer; }
+          .qty-control span { padding: 4px 12px; border-left: 1px solid #ddd; border-right: 1px solid #ddd; font-size: 14px; }
+          .coupon { margin-top: 10px; display: flex; justify-content: center; }
+          .coupon button { background: #0f172a; color: #fff; padding: 12px 20px; border-radius: 30px; font-size: 14px; border: none; cursor: pointer; width: 100%; }
+          .cart-summary { border: 1px solid #eee; border-radius: 8px; padding: 20px; font-size: 14px; }
+          .cart-summary div { display: flex; justify-content: space-between; margin-bottom: 8px; }
+          .cart-summary .total { font-weight: bold; margin-top: 10px; font-size: 16px; }
+          .form-group { margin: 15px 0; }
+          .form-group label { font-size: 13px; display: block; margin-bottom: 6px; }
+          .form-group input { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 14px; }
+          
+.payment-options {
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 15px;
+  margin: 15px 0;
+  background: #fff;
+}
 
-        {/* Cart Content */}
-        {loading ? (
-          <div className="cart-loading">
-            <div className="loading-spinner"></div>
-            <p>Loading your cart...</p>
-          </div>
-        ) : error ? (
-          <div className="cart-error">
-            <div className="error-icon">
-              <ion-icon name="alert-circle-outline"></ion-icon>
-            </div>
-            <h3>Oops! Something went wrong</h3>
+.payment-options label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  cursor: pointer;
+  color: #333;
+}
+
+.payment-options input[type="radio"] {
+  accent-color: #6366f1; /* Nice purple color */
+  width: 16px;
+  height: 16px;
+}
+.payment-options .add-card {
+  margin-top: 10px;
+  color: #2563eb;
+  font-size: 14px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+          .actions { display: flex; justify-content: flex-end; gap: 15px; margin-top: 20px; }
+          .btn { padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; }
+          .btn.cancel { background: #f3f4f6; color: #374151; }
+          .btn.order { background: #6366f1; color: #fff; }
+          .btn.order:hover { background: #4f46e5; }
+        `}
+      </style>
+
+      {/* Modal Background */}
+      <div
+        style={{
+          position: "fixed",
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: "rgba(0,0,0,0.5)",
+          display: "flex", justifyContent: "center", alignItems: "center",
+          zIndex: 1000, padding: "5px"
+        }}
+        onClick={onClose}
+      >
+        {/* Modal Content */}
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            background: "#f9fafb",
+            padding: "5px",
+            borderRadius: "12px",
+            maxHeight: "120vh",
+            overflow: "auto",
+            width: "100%",
+            maxWidth: "1200px"
+          }}
+        >
+          {loading ? (
+            <p>Loading cart...</p>
+          ) : error ? (
             <p>{error}</p>
-            <button className="retry-btn" onClick={fetchCart}>
-              <ion-icon name="refresh-outline"></ion-icon>
-              Try Again
-            </button>
-          </div>
-        ) : !cart || (!cart.items || cart.items.length === 0) && cart.total_items === 0 ? (
-          <div className="cart-empty">
-            <div className="empty-icon">
-              <ion-icon name="bag-outline"></ion-icon>
-            </div>
-            <h3>Your cart is empty</h3>
-            <p>Looks like you haven't added any items to your cart yet.</p>
-            <button className="continue-shopping-btn" onClick={onClose}>
-              <ion-icon name="arrow-back-outline"></ion-icon>
-              Continue Shopping
-            </button>
-          </div>
-        ) : (
-          <div className="cart-content">
-            {/* Session Mismatch Notice */}
-            {cart.total_items > 0 && (!cart.items || cart.items.length === 0) && (
-              <div className="session-mismatch-notice">
-                <div className="notice-icon">
-                  <ion-icon name="warning-outline"></ion-icon>
-                </div>
-                <div className="notice-content">
-                  <h4>Session Mismatch Detected</h4>
-                  <p>Cart count: {cart.total_items} items</p>
-                  <p>Please refresh the page to sync with server.</p>
-                </div>
-              </div>
-            )}
-            
-            {/* Cart Items */}
-            <div className="cart-items">
-              {cart.items && cart.items.length > 0 ? cart.items.map((item) => (
-                <div key={item.id} className="cart-item">
-                  <div className="item-image">
+          ) : (
+            <div className="checkout-container">
+              {/* Left Column */}
+              <div>
+                <h2>Order Summary</h2>
+                {cart?.items?.map((item) => (
+                  <div key={item.id} className="order-item">
                     <img 
                       src={getProductImage(item)} 
                       alt={item.product?.title || 'Product'} 
                       onError={(e) => { e.target.src = "/assets/images/products/1.jpg" }}
                     />
-                  </div>
-                  
-                  <div className="item-info">
-                    <div className="item-details">
-                      <h4 className="item-title">
-                        {item.product?.title || 'Product'}
-                      </h4>
-                      {item.variant && (
-                        <p className="item-variant">
-                          {item.variant.title}
-                        </p>
-                      )}
-                      <p className="item-price">
-                        {formatPrice(item.unit_price)}
-                      </p>
-                    </div>
-                    
-                    <div className="item-controls">
-                      <div className="quantity-controls">
+                    <div className="item-info">
+                      <h4>{item.product?.title || 'Product'}</h4>
+                      {item.variant && <p>{item.variant.title}</p>}
+                      <div className="item-actions">
                         <button 
-                          className="qty-btn decrease"
+                          className="remove-btn"
+                          onClick={() => handleRemoveItem(item.id)}
+                          disabled={updatingItems[item.id]}
+                        >
+                          {updatingItems[item.id] ? 'Removing...' : 'Remove'}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="order-price">{formatPrice(item.unit_price)}</div>
+                      <div className="qty-control">
+                        <button 
                           onClick={() => handleDecreaseQuantity(item.id)}
                           disabled={updatingItems[item.id] || item.quantity <= 1}
-                          title="Decrease quantity"
-                        >
-                          <ion-icon name="remove-outline"></ion-icon>
-                        </button>
-                        
-                        <span className="qty-value">
-                          {updatingItems[item.id] ? (
-                            <div className="mini-spinner"></div>
-                          ) : (
-                            item.quantity
-                          )}
-                        </span>
-                        
+                        >-</button>
+                        <span>{updatingItems[item.id] ? '...' : item.quantity}</span>
                         <button 
-                          className="qty-btn increase"
                           onClick={() => handleIncreaseQuantity(item.id)}
                           disabled={updatingItems[item.id] || !item.can_increase}
-                          title={!item.can_increase ? "Not enough stock available" : "Increase quantity"}
-                        >
-                          <ion-icon name="add-outline"></ion-icon>
-                        </button>
-                      </div>
-                      
-                      <div className="item-total">
-                        {formatPrice(item.total_price)}
+                        >+</button>
                       </div>
                     </div>
                   </div>
+                ))}
+                
+                {/* Clear Cart and Add Coupon Buttons */}
+                <div style={{ marginTop: '20px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  {cart?.items && cart.items.length > 0 && (
+                    <button 
+                      className="clear-cart-btn"
+                      onClick={handleClearCart}
+                      disabled={loading}
+                      style={{ flex: 1, marginTop: 0 }}
+                    >
+                      {loading ? 'Clearing...' : 'Clear Cart'}
+                    </button>
+                  )}
+                  <button 
+                    style={{ 
+                      flex: 1,
+                      background: '#0f172a',
+                      color: '#fff',
+                      padding: '8px 16px',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      fontWeight: '500',
+                      height: '36px',
+                      marginTop: 0
+                    }}
+                  >
+                    Add Coupon Code →
+                  </button>
                 </div>
-              )) : (
-                <div className="no-items-message">
-                  <div className="no-items-icon">
-                    <ion-icon name="bag-outline"></ion-icon>
-                  </div>
-                  <p>No items to display due to session mismatch.</p>
-                  <p>Cart count: {cart.total_items}</p>
+                
+                {/* Continue Shopping Button */}
+                <div className="coupon">
+                  <button 
+                    className="continue-shopping-btn" 
+                    onClick={onClose}
+                    style={{
+                      background: '#6366f1',
+                      color: '#fff',
+                      padding: '12px 20px',
+                      border: 'none',
+                      borderRadius: '30px',
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                      width: '100%',
+                      marginTop: '5px',
+                      textAlign: 'center',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    onMouseEnter={(e) => e.target.style.background = '#4f46e5'}
+                    onMouseLeave={(e) => e.target.style.background = '#6366f1'}
+                  >
+                    Continue Shopping →
+                  </button>
                 </div>
-              )}
-            </div>
+              </div>
 
-            {/* Cart Summary */}
-            <div className="cart-summary">
-              <div className="summary-header">
-                <h3>Order Summary</h3>
-              </div>
-              
-              <div className="summary-details">
-                <div className="summary-row">
-                  <span>Subtotal</span>
-                  <span>{formatPrice(cart?.subtotal || 0)}</span>
+              {/* Right Column */}
+              <div>
+                <h2>
+                  Shopping Cart{" "}
+                  <span style={{ color: "#6366f1", fontSize: "14px" }}>
+                    {cart?.total_items || 0} Items
+                  </span>
+                </h2>
+
+                {/* Cart Summary */}
+                <div className="cart-summary">
+                  <div><span>Subtotal:</span><span>{formatPrice(cart?.subtotal)}</span></div>
+                  <div><span>Delivery:</span><span>{formatPrice(0)}</span></div>
+                  <div className="total"><span>Total:</span><span>{formatPrice(cart?.subtotal)}</span></div>
                 </div>
-                <div className="summary-row">
-                  <span>Shipping</span>
-                  <span>Calculated at checkout</span>
+
+                {/* City */}
+                <div className="form-group">
+                  <label>City</label>
+                  <input type="text" placeholder="Dhaka" />
                 </div>
-                <div className="summary-row total">
-                  <span>Total</span>
-                  <span>{formatPrice(cart?.subtotal || 0)}</span>
+
+                {/* Address */}
+                <div className="form-group">
+                  <label>Address</label>
+                  <input type="text" placeholder="Your Address" />
+                </div>
+
+                {/* Phone */}
+                <div className="form-group">
+                  <label>Phone Number</label>
+                  <input type="text" placeholder="+8801XXXXXXXXX" />
+                </div>
+
+                {/* Payment Section */}
+                <div className="payment-options">
+                  <label><input type="radio" name="payment" /> Cash on delivery</label>
+                  <label><input type="radio" name="payment" defaultChecked /> Bkash Payment</label>
+                  
+
+                  
+                </div>
+
+                {/* Actions */}
+                <div className="actions">
+                  <button className="btn cancel" onClick={onClose}>Cancel</button>
+                  <button className="btn order">Order</button>
                 </div>
               </div>
-              
-              <div className="cart-actions">
-                <button className="btn btn-outline" onClick={onClose}>
-                  <ion-icon name="arrow-back-outline"></ion-icon>
-                  Continue Shopping
-                </button>
-                <button className="btn btn-primary" onClick={handleCheckout}>
-                  <ion-icon name="card-outline"></ion-icon>
-                  Proceed to Checkout
-                </button>
-              </div>
-              
-              <button 
-                className="btn btn-danger" 
-                onClick={handleClearCart}
-                disabled={loading}
-              >
-                <ion-icon name="trash-outline"></ion-icon>
-                Clear Cart
-              </button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 
