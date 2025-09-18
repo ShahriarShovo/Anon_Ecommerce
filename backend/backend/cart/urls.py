@@ -24,9 +24,10 @@ from .views.cart import (
     add_to_cart,
     increase_cart_item_quantity,
     decrease_cart_item_quantity,
-    get_cart,
-    clear_cart
+    remove_cart_item,
+    get_cart
 )
+from .views.clear_cart import clear_cart
 from .views.wishlist import (
     add_to_wishlist,
     remove_from_wishlist,
@@ -39,6 +40,7 @@ cart_urlpatterns = [
     path('add/', add_to_cart, name='add-to-cart'),
     path('items/<int:item_id>/increase/', increase_cart_item_quantity, name='increase-cart-item'),
     path('items/<int:item_id>/decrease/', decrease_cart_item_quantity, name='decrease-cart-item'),
+    path('items/<int:item_id>/remove/', remove_cart_item, name='remove-cart-item'),
     path('', get_cart, name='get-cart'),
     path('clear/', clear_cart, name='clear-cart'),
 ]

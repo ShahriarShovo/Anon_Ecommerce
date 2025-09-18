@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Invoice #{{ invoice.invoice_number }}</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    />
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+      .invoice-header {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+      }
+      .invoice-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+      }
+      .total-section {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="py-3 py-md-5">
+      <div class="container">
+        <div class="row justify-content-center">
+          <div class="col-12 col-lg-9 col-xl-8 col-xxl-7">
+            <!-- Invoice Header -->
+            <div class="row gy-3 mb-3 invoice-header">
+              <div class="col-6">
+                <div class="d-flex align-items-center">
+                  <div
+                    style="
+                      width: 40px;
+                      height: 40px;
+                      background: rgba(255, 255, 255, 0.2);
+                      border-radius: 8px;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      font-size: 20px;
+                      margin-right: 12px;
+                    "
+                  >
+                    🛍️
+                  </div>
+                  <h2 class="text-uppercase m-0">Invoice</h2>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="d-block text-end">
+                  <div
+                    class="d-flex align-items-center justify-content-end mb-2"
+                  >
+                    <div
+                      style="
+                        width: 32px;
+                        height: 32px;
+                        background: rgba(255, 255, 255, 0.2);
+                        border-radius: 6px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 16px;
+                        margin-right: 10px;
+                      "
+                    >
+                      🛍️
+                    </div>
+                    <h4 class="mb-0">{{ invoice.company_name }}</h4>
+                  </div>
+                  <p class="mb-0">{{ invoice.company_address }}</p>
+                  <p class="mb-0">Phone: {{ invoice.company_phone }}</p>
+                  <p class="mb-0">Email: {{ invoice.company_email }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bill To & Invoice Details -->
+            <div class="row mb-3">
+              <div class="col-12 col-sm-6 col-md-8">
+                <h4>Bill To</h4>
+                <address>
+                  <strong>{{ delivery_address.full_name }}</strong><br />
+                  {{ delivery_address.address_line_1 }}<br />
+                  {% if delivery_address.address_line_2 %}{{
+                  delivery_address.address_line_2 }}<br />{% endif %} {{
+                  delivery_address.city }}, {{ delivery_address.country }}<br />
+                  {% if delivery_address.postal_code %}{{
+                  delivery_address.postal_code }}<br />{% endif %} Phone: {{
+                  delivery_address.phone_number }}<br />
+                </address>
+              </div>
+              <div class="col-12 col-sm-6 col-md-4">
+                <h4 class="row">
+                  <span class="col-6">Invoice #</span>
+                  <span class="col-6 text-sm-end"
+                    >{{ invoice.invoice_number }}</span
+                  >
+                </h4>
+                <div class="row">
+                  <span class="col-6">Order ID</span>
+                  <span class="col-6 text-sm-end"
+                    >{{ order.order_number }}</span
+                  >
+                  <span class="col-6">Invoice Date</span>
+                  <span class="col-6 text-sm-end"
+                    >{{ invoice.invoice_date|date:"d/m/Y" }}</span
+                  >
+                  <span class="col-6">Due Date</span>
+                  <span class="col-6 text-sm-end"
+                    >{{ invoice.due_date|date:"d/m/Y" }}</span
+                  >
+                  <span class="col-6">Status</span>
+                  <span class="col-6 text-sm-end"
+                    >{{ order.get_status_display }}</span
+                  >
+                </div>
+              </div>
+            </div>
+
+            <!-- Order Items Table -->
+            <div class="row mb-3">
+              <div class="col-12">
+                <div class="table-responsive">
+                  <table class="table table-striped invoice-table">
+                    <thead>
+                      <tr>
+                        <th scope="col" class="text-uppercase">Qty</th>
+                        <th scope="col" class="text-uppercase">Product</th>
+                        <th scope="col" class="text-uppercase text-end">
+                          Unit Price
+                        </th>
+                        <th scope="col" class="text-uppercase text-end">
+                          Amount
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody class="table-group-divider">
+                      {% for item in order_items %}
+                      <tr>
+                        <th scope="row">{{ item.quantity }}</th>
+                        <td>
+                          {{ item.product_name }} {% if item.variant_title %}<br /><small
+                            class="text-muted"
+                            >{{ item.variant_title }}</small
+                          >{% endif %}
+                        </td>
+                        <td class="text-end">
+                          ৳{{ item.unit_price|floatformat:2 }}
+                        </td>
+                        <td class="text-end">
+                          ৳{{ item.total_price|floatformat:2 }}
+                        </td>
+                      </tr>
+                      {% endfor %}
+                      <tr>
+                        <td colspan="3" class="text-end">
+                          <strong>Subtotal</strong>
+                        </td>
+                        <td class="text-end">
+                          <strong>৳{{ order.subtotal|floatformat:2 }}</strong>
+                        </td>
+                      </tr>
+                      {% if order.shipping_cost > 0 %}
+                      <tr>
+                        <td colspan="3" class="text-end">Shipping</td>
+                        <td class="text-end">
+                          ৳{{ order.shipping_cost|floatformat:2 }}
+                        </td>
+                      </tr>
+                      {% endif %} {% if order.tax_amount > 0 %}
+                      <tr>
+                        <td colspan="3" class="text-end">Tax</td>
+                        <td class="text-end">
+                          ৳{{ order.tax_amount|floatformat:2 }}
+                        </td>
+                      </tr>
+                      {% endif %}
+                      <tr class="total-section">
+                        <th
+                          scope="row"
+                          colspan="3"
+                          class="text-uppercase text-end"
+                        >
+                          Total
+                        </th>
+                        <td class="text-end">
+                          <strong
+                            >৳{{ order.total_amount|floatformat:2 }}</strong
+                          >
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Payment Information -->
+            <div class="row">
+              <div class="col-12">
+                <div class="alert alert-info">
+                  <h5>Payment Information</h5>
+                  <p>
+                    <strong>Payment Method:</strong> {{
+                    payment.payment_method.name }}
+                  </p>
+                  <p>
+                    <strong>Payment Status:</strong> {{
+                    payment.get_status_display }}
+                  </p>
+                  {% if payment.is_cash_on_delivery %}
+                  <p>
+                    <em
+                      >This is a Cash on Delivery order. Payment will be
+                      collected upon delivery.</em
+                    >
+                  </p>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="row mt-4">
+              <div class="col-12">
+                <div
+                  style="
+                    display: flex;
+                    justify-content: center;
+                    gap: 15px;
+                    padding: 20px;
+                    background-color: #f8f9fa;
+                    border-radius: 8px;
+                    border: 1px solid #dee2e6;
+                    margin-bottom: 20px;
+                  "
+                >
+                  <button
+                    onclick="window.print()"
+                    style="
+                      background: linear-gradient(
+                        135deg,
+                        #28a745 0%,
+                        #20c997 100%
+                      );
+                      color: white;
+                      border: none;
+                      padding: 12px 24px;
+                      border-radius: 8px;
+                      cursor: pointer;
+                      font-weight: 600;
+                      font-size: 14px;
+                      box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
+                    "
+                  >
+                    🖨️ Print Invoice
+                  </button>
+                  <button
+                    onclick="window.open(window.location.href, '_blank')"
+                    style="
+                      background: linear-gradient(
+                        135deg,
+                        #007bff 0%,
+                        #0056b3 100%
+                      );
+                      color: white;
+                      border: none;
+                      padding: 12px 24px;
+                      border-radius: 8px;
+                      cursor: pointer;
+                      font-weight: 600;
+                      font-size: 14px;
+                      box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+                    "
+                  >
+                    📄 Download PDF
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="row">
+              <div class="col-12 text-center">
+                <p class="text-muted">
+                  Thank you for your business!<br />
+                  For any queries, please contact us at {{ invoice.company_email
+                  }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </body>
+</html>

@@ -36,6 +36,19 @@ def api_info(request):
             'add_item': '/api/wishlist/add/',
             'get_wishlist': '/api/wishlist/',
             'remove_item': '/api/wishlist/items/{id}/remove/'
+        },
+        'order_endpoints': {
+            'create_order': '/api/orders/create/',
+            'list_orders': '/api/orders/',
+            'order_detail': '/api/orders/{id}/',
+            'payment_methods': '/api/orders/payment-methods/'
+        },
+        'invoice_endpoints': {
+            'generate_invoice': '/api/invoice/generate/{order_id}/',
+            'list_invoices': '/api/invoice/',
+            'invoice_detail': '/api/invoice/{id}/',
+            'invoice_pdf': '/api/invoice/{id}/pdf/',
+            'download_invoice': '/api/invoice/{id}/download/'
         }
     })
 
@@ -53,6 +66,8 @@ urlpatterns = [
     path('accounts/', include('accounts.urls')),
     path('api/products/', include('products.urls')),
     path('api/', include('cart.urls')),  # Cart and Wishlist APIs
+    path('api/orders/', include('orders.urls')),  # Orders APIs
+    path('api/invoice/', include('invoice.urls')),  # Invoice APIs
 ]
 
 # Serve media files during development

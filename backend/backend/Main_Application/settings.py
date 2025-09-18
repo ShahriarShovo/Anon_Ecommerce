@@ -30,6 +30,8 @@ INSTALLED_APPS = [
     'accounts',
     'products',
     'cart',
+    'orders',
+    'invoice',
     'rest_framework',
     'drf_yasg',
     'corsheaders',

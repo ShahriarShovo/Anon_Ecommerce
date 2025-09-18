@@ -9,6 +9,7 @@ APIs:
 - add_to_cart: Add items to cart
 - increase_cart_item_quantity: Increase item quantity
 - decrease_cart_item_quantity: Decrease item quantity
+- remove_cart_item: Remove an item from the cart
 - get_cart: Get user's cart
 - clear_cart: Clear all items from cart
 """
@@ -195,6 +196,68 @@ def add_to_cart(request):
             'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+@api_view(['DELETE'])
+@permission_classes([AllowAny])  # Allow both authenticated and guest users
+def remove_cart_item(request, item_id):
+    """
+    Remove Cart Item API
+    ====================
+    
+    Removes a specific item from the user's cart.
+    
+    URL: /api/cart/items/{item_id}/remove/
+    
+    Response:
+    {
+        "success": true,
+        "message": "Item removed successfully",
+        "cart": {...}
+    }
+    """
+    try:
+        print(f"🛒 Backend: Remove cart item - Item ID: {item_id}")
+        
+        # Get cart item
+        cart_item = get_object_or_404(CartItem, id=item_id)
+        print(f"🛒 Backend: Found cart item: {cart_item.id}, Product: {cart_item.product.title}")
+        
+        # Verify cart ownership
+        cart = get_or_create_cart(request)
+        print(f"🛒 Backend: Cart ID: {cart.id}, Session Key: {cart.session_key}, User: {cart.user}")
+        
+        if cart_item.cart != cart:
+            print(f"🛒 Backend: Cart ownership mismatch - Item cart: {cart_item.cart.id}, User cart: {cart.id}")
+            return Response({
+                'success': False,
+                'error': 'Cart item not found in your cart'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        with transaction.atomic():
+            # Delete the item
+            print(f"🛒 Backend: Deleting cart item: {cart_item.id}")
+            cart_item.delete()
+            
+            # Update cart totals
+            cart.calculate_totals()
+            print(f"🛒 Backend: Cart totals updated - Total items: {cart.total_items}, Subtotal: {cart.subtotal}")
+        
+        # Serialize response
+        cart_serializer = CartSerializer(cart)
+        
+        print(f"🛒 Backend: Remove successful - Returning cart with {len(cart_serializer.data.get('items', []))} items")
+        
+        return Response({
+            'success': True,
+            'message': 'Item removed successfully',
+            'cart': cart_serializer.data
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        print(f"🛒 Backend: Remove cart item error: {str(e)}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])  # Allow both authenticated and guest users

@@ -182,9 +182,55 @@ class ApiService {
     });
   }
 
+  async removeCartItem(itemId) {
+    console.log('🌐 API: Removing cart item with ID:', itemId);
+    return this.request(`/api/cart/items/${itemId}/remove/`, {
+      method: 'DELETE',
+    });
+  }
+
   async clearCart() {
     return this.request('/api/cart/clear/', {
       method: 'DELETE',
+    });
+  }
+
+  // Order APIs
+  async placeOrder(orderData) {
+    return this.request('/api/orders/create/', {
+      method: 'POST',
+      body: JSON.stringify(orderData),
+    });
+  }
+
+  async getOrders() {
+    return this.request('/api/orders/', {
+      method: 'GET',
+    });
+  }
+
+  async getOrder(orderId) {
+    return this.request(`/api/orders/${orderId}/`, {
+      method: 'GET',
+    });
+  }
+
+  // Invoice APIs
+  async generateInvoice(orderId) {
+    return this.request(`/api/invoice/generate/${orderId}/`, {
+      method: 'GET',
+    });
+  }
+
+  async getInvoices() {
+    return this.request('/api/invoice/', {
+      method: 'GET',
+    });
+  }
+
+  async getInvoice(invoiceId) {
+    return this.request(`/api/invoice/${invoiceId}/`, {
+      method: 'GET',
     });
   }
 
