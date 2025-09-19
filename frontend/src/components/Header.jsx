@@ -262,9 +262,6 @@ const Header = ({onAuthClick}) => {
     console.log('🛒 Header: Current URL:', window.location.href)
     console.log('🛒 Header: Current path:', window.location.pathname)
 
-    // Debug alert
-    alert('Cart button clicked! Should redirect to /cart')
-
     // Navigate to cart page
     window.location.replace('/cart')
     console.log('🛒 Header: Navigation called')

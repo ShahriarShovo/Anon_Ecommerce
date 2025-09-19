@@ -184,9 +184,12 @@ class ApiService {
 
   // Address APIs
   async getAddresses() {
-    return this.request('/api/orders/addresses/', {
+    console.log('🌐 API: Fetching addresses from backend...')
+    const result = await this.request('/api/orders/addresses/', {
       method: 'GET',
     });
+    console.log('🌐 API: Addresses fetched:', result);
+    return result;
   }
 
   async createAddress(addressData) {

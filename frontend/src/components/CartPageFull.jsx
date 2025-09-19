@@ -35,33 +35,92 @@ const CartPageFull = () => {
         is_default: false
     })
     const [isSubmittingAddress, setIsSubmittingAddress] = useState(false)
+    const [isAddressesLoading, setIsAddressesLoading] = useState(false)
+    const [hasLoadedAddresses, setHasLoadedAddresses] = useState(false) // Track if addresses have been loaded
 
     // Debouncing refs
     const debounceTimeouts = useRef({})
     const pendingOperations = useRef({})
+    const addressLoadTimestamp = useRef(0) // Track when addresses were last loaded
 
     // Load addresses
     const loadAddresses = useCallback(async () => {
+        // Prevent multiple simultaneous calls
+        if(isAddressesLoading) {
+            console.log('🛒 CartPage: Address loading already in progress, skipping...')
+            return
+        }
+
+        // Prevent loading too frequently (within 1 second)
+        const now = Date.now()
+        if(now - addressLoadTimestamp.current < 1000) {
+            console.log('🛒 CartPage: Address loading too frequent, skipping...')
+            return
+        }
+
         try {
+            setIsAddressesLoading(true)
+            addressLoadTimestamp.current = now
             console.log('🛒 CartPage: Loading addresses...')
             const response = await apiService.getAddresses()
             console.log('🛒 CartPage: Address API response:', response)
+            console.log('🛒 CartPage: Address API response type:', typeof response)
+            console.log('🛒 CartPage: Address API response length:', Array.isArray(response) ? response.length : 'Not an array')
 
             if(Array.isArray(response)) {
-                setAddresses(response)
-                // Auto-select default address if available
-                const defaultAddr = response.find(addr => addr.is_default)
-                if(defaultAddr) {
-                    setSelectedAddressId(defaultAddr.id)
+                // Debug: Check for duplicate IDs
+                const ids = response.map(addr => addr.id)
+                const uniqueIds = [...new Set(ids)]
+                console.log('🛒 CartPage: Address IDs:', ids)
+                console.log('🛒 CartPage: Unique Address IDs:', uniqueIds)
+                console.log('🛒 CartPage: Duplicate IDs found:', ids.length !== uniqueIds.length)
+
+                // Remove duplicates if any (defensive programming)
+                const uniqueAddresses = response.filter((addr, index, self) =>
+                    index === self.findIndex(a => a.id === addr.id)
+                )
+
+                // Additional check: remove addresses with duplicate content
+                const contentFilteredAddresses = uniqueAddresses.filter((addr, index, self) => {
+                    const firstIndex = self.findIndex(a =>
+                        a.full_name === addr.full_name &&
+                        a.phone_number === addr.phone_number &&
+                        a.address_line_1 === addr.address_line_1 &&
+                        a.city === addr.city
+                    );
+                    return firstIndex === index;
+                });
+
+                console.log('🛒 CartPage: After content deduplication:', contentFilteredAddresses.length, 'addresses');
+
+                // Only update if addresses have actually changed
+                const currentAddressIds = addresses.map(a => a.id).sort()
+                const newAddressIds = contentFilteredAddresses.map(a => a.id).sort()
+
+                if(JSON.stringify(currentAddressIds) !== JSON.stringify(newAddressIds)) {
+                    console.log('🛒 CartPage: Addresses changed, updating state')
+                    setAddresses(contentFilteredAddresses)
+                    // Auto-select default address if available and none selected
+                    if(!selectedAddressId) {
+                        const defaultAddr = contentFilteredAddresses.find(addr => addr.is_default)
+                        if(defaultAddr) {
+                            setSelectedAddressId(defaultAddr.id)
+                        }
+                    }
+                } else {
+                    console.log('🛒 CartPage: Addresses unchanged, skipping state update')
                 }
             } else {
                 setAddresses([])
             }
+            setHasLoadedAddresses(true)
         } catch(error) {
             console.error('❌ CartPage: Error loading addresses:', error)
             setAddresses([])
+        } finally {
+            setIsAddressesLoading(false)
         }
-    }, [])
+    }, [isAddressesLoading, addresses, selectedAddressId])
 
     // Fetch cart and addresses
     useEffect(() => {
@@ -81,8 +140,38 @@ const CartPageFull = () => {
             }
         }
         fetchCart()
-        loadAddresses()
-    }, [loadAddresses])
+
+        // Only load addresses if not already loaded
+        if(!hasLoadedAddresses) {
+            console.log('🛒 CartPage: Loading addresses for the first time')
+            loadAddresses()
+        } else {
+            console.log('🛒 CartPage: Addresses already loaded, skipping initial load')
+        }
+    }, [loadAddresses, hasLoadedAddresses])
+
+    // Listen for cart updates to refresh addresses
+    useEffect(() => {
+        const handleCartUpdate = () => {
+            console.log('🛒 CartPage: Received cartUpdated event')
+            // Small delay to ensure backend has processed the update
+            setTimeout(() => {
+                // Only reload if not already loading and not too frequent
+                const now = Date.now()
+                if(!isAddressesLoading && (now - addressLoadTimestamp.current > 2000)) {
+                    console.log('🛒 CartPage: Reloading addresses due to cart update')
+                    loadAddresses()
+                } else {
+                    console.log('🛒 CartPage: Skipping address reload due to cart update - too frequent or already loading')
+                }
+            }, 300)
+        }
+
+        window.addEventListener('cartUpdated', handleCartUpdate)
+        return () => {
+            window.removeEventListener('cartUpdated', handleCartUpdate)
+        }
+    }, [loadAddresses, isAddressesLoading])
 
     // Cleanup debounce timeouts on unmount
     useEffect(() => {
@@ -326,14 +415,6 @@ const CartPageFull = () => {
                 </div>
             )}
 
-            <div className="cart-page-header">
-                <div className="container">
-                    <div className="cart-page-title">
-                        <h1>Your Shopping Cart</h1>
-                        <p>Review your items and proceed to checkout</p>
-                    </div>
-                </div>
-            </div>
 
             <div className="cart-page-content">
                 <div className="container">
@@ -487,70 +568,54 @@ const CartPageFull = () => {
                                         </button>
                                     </div>
 
+                                    {/* Address Content (collapsible) */}
                                     <div className={`address-content ${isAddressSectionExpanded ? 'expanded' : 'collapsed'}`}>
                                         {addresses.length > 0 ? (
                                             <div className="address-buttons">
-                                                {addresses.map((address) => (
-                                                    <div
-                                                        key={address.id}
-                                                        className={`address-card ${selectedAddressId === address.id ? 'selected' : ''}`}
-                                                        onClick={() => handleAddressSelect(address.id)}
-                                                    >
-                                                        <div className="address-card-header">
-                                                            <div className="address-icon">
-                                                                {address.address_type === 'home' ? '🏠' : '🏢'}
-                                                            </div>
-                                                            <div className="address-title">
-                                                                {address.address_type === 'home' ? 'Home Address' : 'Office Address'}
-                                                                {address.is_default && <span className="default-badge">Default</span>}
-                                                            </div>
-                                                            {selectedAddressId === address.id && (
-                                                                <div className="selected-indicator">✓</div>
-                                                            )}
-                                                        </div>
-                                                        <div className="address-card-body">
-                                                            <div className="address-name">{address.full_name}</div>
-                                                            <div className="address-location">
-                                                                {address.address_line_1}
-                                                                {address.address_line_2 && `, ${address.address_line_2}`}
-                                                                <br />
-                                                                {address.city}, {address.postal_code}
-                                                                <br />
-                                                                {address.country}
-                                                            </div>
-                                                            <div className="address-phone">📱 {address.phone_number}</div>
-                                                        </div>
-                                                        <div className="address-card-footer">
-                                                            <button
-                                                                className={`select-btn ${selectedAddressId === address.id ? 'selected' : ''}`}
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation()
-                                                                    handleAddressSelect(address.id)
-                                                                }}
-                                                            >
-                                                                {selectedAddressId === address.id ? 'SELECTED' : 'SELECT'}
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                                {(() => {
+                                                    // Debug: Log all addresses before rendering
+                                                    console.log('🛒 CartPage: Rendering addresses list:', addresses);
+                                                    const uniqueAddresses = addresses.filter((addr, index, self) =>
+                                                        index === self.findIndex(a => a.id === addr.id)
+                                                    );
+                                                    console.log('🛒 CartPage: Unique addresses for rendering:', uniqueAddresses);
 
-                                                <div
-                                                    className="add-address-card"
-                                                    onClick={() => setShowNewAddressForm(true)}
-                                                >
-                                                    <div className="add-address-icon">➕</div>
-                                                    <div className="add-address-title">Add New Address</div>
-                                                    <div className="add-address-subtitle">Create a new delivery address</div>
-                                                    <button
-                                                        className="add-address-btn"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation()
-                                                            setShowNewAddressForm(true)
-                                                        }}
-                                                    >
-                                                        ADD NEW
-                                                    </button>
-                                                </div>
+                                                    return uniqueAddresses.map((address, index) => {
+                                                        console.log('Rendering address:', address.id, address)
+                                                        return (
+                                                            <div
+                                                                key={`${address.id}-${index}`}  // Added index to ensure unique key
+                                                                className={`address-card ${selectedAddressId === address.id ? 'selected' : ''}`}
+                                                                onClick={() => handleAddressSelect(address.id)}
+                                                            >
+                                                                <div className="address-card-header">
+                                                                    <div className="address-icon">
+                                                                        {address.address_type === 'home' ? '🏠' : '🏢'}
+                                                                    </div>
+                                                                    <div className="address-title">
+                                                                        {address.address_type === 'home' ? 'Home Address' : 'Office Address'}
+                                                                        {address.is_default && <span className="default-badge">Default</span>}
+                                                                    </div>
+                                                                    {selectedAddressId === address.id && (
+                                                                        <div className="selected-indicator">✓</div>
+                                                                    )}
+                                                                </div>
+                                                                <div className="address-card-body">
+                                                                    <div className="address-name">{address.full_name}</div>
+                                                                    <div className="address-location">
+                                                                        {address.address_line_1}
+                                                                        {address.address_line_2 && `, ${address.address_line_2}`}
+                                                                        <br />
+                                                                        {address.city}, {address.postal_code}
+                                                                        <br />
+                                                                        {address.country}
+                                                                    </div>
+                                                                    <div className="address-phone">📱 {address.phone_number}</div>
+                                                                </div>
+                                                            </div>
+                                                        )
+                                                    })
+                                                })()}
                                             </div>
                                         ) : (
                                             <div className="no-addresses">
@@ -558,161 +623,211 @@ const CartPageFull = () => {
                                                 <p className="no-addresses-text">
                                                     No saved addresses found. Please add a delivery address.
                                                 </p>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowNewAddressForm(true)}
-                                                    className="add-first-address-btn"
-                                                >
-                                                    ➕ Add Your First Address
-                                                </button>
-                                            </div>
-                                        )}
-
-                                        {/* New Address Form */}
-                                        {showNewAddressForm && (
-                                            <div className="new-address-form" style={{
-                                                marginTop: '20px',
-                                                padding: '20px',
-                                                border: '1px solid #e5e7eb',
-                                                borderRadius: '8px',
-                                                background: '#f9fafb'
-                                            }}>
-                                                <h4 style={{marginBottom: '15px', color: '#333'}}>Add New Address</h4>
-                                                <form onSubmit={handleNewAddressSubmit}>
-                                                    <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px'}}>
-                                                        <div>
-                                                            <label style={{display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: '500'}}>
-                                                                Full Name *
-                                                            </label>
-                                                            <input
-                                                                type="text"
-                                                                name="full_name"
-                                                                value={newAddressForm.full_name}
-                                                                onChange={handleNewAddressInputChange}
-                                                                required
-                                                                style={{width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px'}}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <label style={{display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: '500'}}>
-                                                                Phone Number *
-                                                            </label>
-                                                            <input
-                                                                type="tel"
-                                                                name="phone_number"
-                                                                value={newAddressForm.phone_number}
-                                                                onChange={handleNewAddressInputChange}
-                                                                required
-                                                                style={{width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px'}}
-                                                            />
-                                                        </div>
-                                                    </div>
-
-                                                    <div style={{marginBottom: '15px'}}>
-                                                        <label style={{display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: '500'}}>
-                                                            Address Line 1 *
-                                                        </label>
-                                                        <input
-                                                            type="text"
-                                                            name="address_line_1"
-                                                            value={newAddressForm.address_line_1}
-                                                            onChange={handleNewAddressInputChange}
-                                                            required
-                                                            style={{width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px'}}
-                                                        />
-                                                    </div>
-
-                                                    <div style={{marginBottom: '15px'}}>
-                                                        <label style={{display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: '500'}}>
-                                                            Address Line 2
-                                                        </label>
-                                                        <input
-                                                            type="text"
-                                                            name="address_line_2"
-                                                            value={newAddressForm.address_line_2}
-                                                            onChange={handleNewAddressInputChange}
-                                                            style={{width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px'}}
-                                                        />
-                                                    </div>
-
-                                                    <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px', marginBottom: '15px'}}>
-                                                        <div>
-                                                            <label style={{display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: '500'}}>
-                                                                City *
-                                                            </label>
-                                                            <input
-                                                                type="text"
-                                                                name="city"
-                                                                value={newAddressForm.city}
-                                                                onChange={handleNewAddressInputChange}
-                                                                required
-                                                                style={{width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px'}}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <label style={{display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: '500'}}>
-                                                                Postal Code *
-                                                            </label>
-                                                            <input
-                                                                type="text"
-                                                                name="postal_code"
-                                                                value={newAddressForm.postal_code}
-                                                                onChange={handleNewAddressInputChange}
-                                                                required
-                                                                style={{width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px'}}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <label style={{display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: '500'}}>
-                                                                Country *
-                                                            </label>
-                                                            <select
-                                                                name="country"
-                                                                value={newAddressForm.country}
-                                                                onChange={handleNewAddressInputChange}
-                                                                required
-                                                                style={{width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px'}}
-                                                            >
-                                                                <option value="Bangladesh">Bangladesh</option>
-                                                            </select>
-                                                        </div>
-                                                    </div>
-
-                                                    <div style={{display: 'flex', gap: '10px', justifyContent: 'flex-end'}}>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setShowNewAddressForm(false)}
-                                                            style={{
-                                                                padding: '10px 20px',
-                                                                border: '1px solid #d1d5db',
-                                                                borderRadius: '6px',
-                                                                background: '#fff',
-                                                                color: '#374151',
-                                                                cursor: 'pointer'
-                                                            }}
-                                                        >
-                                                            Cancel
-                                                        </button>
-                                                        <button
-                                                            type="submit"
-                                                            disabled={isSubmittingAddress}
-                                                            style={{
-                                                                padding: '10px 20px',
-                                                                border: 'none',
-                                                                borderRadius: '6px',
-                                                                background: isSubmittingAddress ? '#9ca3af' : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                                                                color: '#fff',
-                                                                cursor: isSubmittingAddress ? 'not-allowed' : 'pointer'
-                                                            }}
-                                                        >
-                                                            {isSubmittingAddress ? 'Adding...' : 'Add Address'}
-                                                        </button>
-                                                    </div>
-                                                </form>
                                             </div>
                                         )}
                                     </div>
+
+                                    {/* Add New Address Section (always visible) */}
+                                    {addresses.length > 0 ? (
+                                        <div className="add-address-card" style={{marginTop: '20px'}} onClick={() => setShowNewAddressForm(true)}>
+                                            <div className="add-address-icon">➕</div>
+                                            <div className="add-address-title">Add New Address</div>
+                                            <div className="add-address-subtitle">Create a new delivery address</div>
+                                            <button
+                                                className="add-address-btn"
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    setShowNewAddressForm(true)
+                                                }}
+                                            >
+                                                ADD NEW
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="add-first-address-container" style={{textAlign: 'center', marginTop: '20px'}}>
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowNewAddressForm(true)}
+                                                className="add-first-address-btn"
+                                                style={{
+                                                    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    padding: '12px 24px',
+                                                    borderRadius: '8px',
+                                                    fontSize: '14px',
+                                                    fontWeight: '600',
+                                                    cursor: 'pointer',
+                                                    boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)',
+                                                    transition: 'all 0.3s ease'
+                                                }}
+                                            >
+                                                ➕ Add Your First Address
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
+
+                                {/* New Address Form (always visible when showNewAddressForm is true) */}
+                                {showNewAddressForm && (
+                                    <div className="new-address-form" style={{
+                                        marginTop: '20px',
+                                        padding: '20px',
+                                        border: '1px solid #e5e7eb',
+                                        borderRadius: '8px',
+                                        background: '#f9fafb',
+                                        position: 'relative'
+                                    }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowNewAddressForm(false)}
+                                            style={{
+                                                position: 'absolute',
+                                                top: '10px',
+                                                right: '10px',
+                                                background: 'none',
+                                                border: 'none',
+                                                fontSize: '20px',
+                                                cursor: 'pointer',
+                                                color: '#999'
+                                            }}
+                                        >
+                                            ×
+                                        </button>
+                                        <h4 style={{marginBottom: '15px', color: '#333'}}>Add New Address</h4>
+                                        <form onSubmit={handleNewAddressSubmit}>
+                                            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px'}}>
+                                                <div>
+                                                    <label style={{display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: '500'}}>
+                                                        Full Name *
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        name="full_name"
+                                                        value={newAddressForm.full_name}
+                                                        onChange={handleNewAddressInputChange}
+                                                        required
+                                                        style={{width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px'}}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label style={{display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: '500'}}>
+                                                        Phone Number *
+                                                    </label>
+                                                    <input
+                                                        type="tel"
+                                                        name="phone_number"
+                                                        value={newAddressForm.phone_number}
+                                                        onChange={handleNewAddressInputChange}
+                                                        required
+                                                        style={{width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px'}}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div style={{marginBottom: '15px'}}>
+                                                <label style={{display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: '500'}}>
+                                                    Address Line 1 *
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    name="address_line_1"
+                                                    value={newAddressForm.address_line_1}
+                                                    onChange={handleNewAddressInputChange}
+                                                    required
+                                                    style={{width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px'}}
+                                                />
+                                            </div>
+
+                                            <div style={{marginBottom: '15px'}}>
+                                                <label style={{display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: '500'}}>
+                                                    Address Line 2
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    name="address_line_2"
+                                                    value={newAddressForm.address_line_2}
+                                                    onChange={handleNewAddressInputChange}
+                                                    style={{width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px'}}
+                                                />
+                                            </div>
+
+                                            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px', marginBottom: '15px'}}>
+                                                <div>
+                                                    <label style={{display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: '500'}}>
+                                                        City *
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        name="city"
+                                                        value={newAddressForm.city}
+                                                        onChange={handleNewAddressInputChange}
+                                                        required
+                                                        style={{width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px'}}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label style={{display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: '500'}}>
+                                                        Postal Code *
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        name="postal_code"
+                                                        value={newAddressForm.postal_code}
+                                                        onChange={handleNewAddressInputChange}
+                                                        required
+                                                        style={{width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px'}}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label style={{display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: '500'}}>
+                                                        Country *
+                                                    </label>
+                                                    <select
+                                                        name="country"
+                                                        value={newAddressForm.country}
+                                                        onChange={handleNewAddressInputChange}
+                                                        required
+                                                        style={{width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px'}}
+                                                    >
+                                                        <option value="Bangladesh">Bangladesh</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div style={{display: 'flex', gap: '10px', justifyContent: 'flex-end'}}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowNewAddressForm(false)}
+                                                    style={{
+                                                        padding: '10px 20px',
+                                                        border: '1px solid #d1d5db',
+                                                        borderRadius: '6px',
+                                                        background: '#fff',
+                                                        color: '#374151',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    type="submit"
+                                                    disabled={isSubmittingAddress}
+                                                    style={{
+                                                        padding: '10px 20px',
+                                                        border: 'none',
+                                                        borderRadius: '6px',
+                                                        background: isSubmittingAddress ? '#9ca3af' : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                                                        color: '#fff',
+                                                        cursor: isSubmittingAddress ? 'not-allowed' : 'pointer'
+                                                    }}
+                                                >
+                                                    {isSubmittingAddress ? 'Adding...' : 'Add Address'}
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                )}
 
                                 {/* Payment Section */}
                                 <div className="payment-options">
