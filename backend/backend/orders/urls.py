@@ -1,6 +1,7 @@
 from django.urls import path
 from orders.views.orders.order_views import create_order, OrderListView, OrderDetailView
 from orders.views.payments.payment_views import PaymentMethodListView, mark_cod_collected, PaymentDetailView
+from orders.views.orders.address_views import AddressListView, AddressDetailView, set_default_address, get_default_address
 
 urlpatterns = [
     # Order URLs
@@ -12,4 +13,10 @@ urlpatterns = [
     path('payment-methods/', PaymentMethodListView.as_view(), name='payment_method_list'),
     path('payments/<int:payment_id>/mark-cod-collected/', mark_cod_collected, name='mark_cod_collected'),
     path('payments/<int:pk>/', PaymentDetailView.as_view(), name='payment_detail'),
+    
+    # Address URLs
+    path('addresses/', AddressListView.as_view(), name='address_list'),
+    path('addresses/<int:pk>/', AddressDetailView.as_view(), name='address_detail'),
+    path('addresses/<int:address_id>/set-default/', set_default_address, name='set_default_address'),
+    path('addresses/default/', get_default_address, name='get_default_address'),
 ]

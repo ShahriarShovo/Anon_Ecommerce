@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, {useState, useEffect} from 'react'
 import apiService from '../services/api'
 
 const ProductGrid = () => {
@@ -15,13 +15,13 @@ const ProductGrid = () => {
     try {
       setLoading(true)
       const response = await apiService.getHomepageProducts()
-      
-      if (response.success) {
+
+      if(response.success) {
         setProducts(response.products)
       } else {
         throw new Error(response.error || 'Failed to fetch products')
       }
-    } catch (error) {
+    } catch(error) {
       console.error('Error fetching products:', error)
       setError('Failed to load products')
       // Fallback to static products if API fails
@@ -32,44 +32,44 @@ const ProductGrid = () => {
   }
 
   // Add to cart function
-  const handleAddToCart = async (productId, productTitle) => {
+  const handleAddToCart = async (productId, productTitle, variantId = null) => {
     try {
-      console.log('🛒 ProductGrid: Adding to cart - Product ID:', productId, 'Title:', productTitle)
-      setAddingToCart(prev => ({ ...prev, [productId]: true }))
-      
-      const response = await apiService.addToCart(productId, 1)
+      console.log('🛒 ProductGrid: Adding to cart - Product ID:', productId, 'Title:', productTitle, 'Variant ID:', variantId)
+      setAddingToCart(prev => ({...prev, [productId]: true}))
+
+      const response = await apiService.addToCart(productId, 1, variantId)
       console.log('🛒 ProductGrid: Add to cart API response:', response)
-      
-      if (response.success) {
+
+      if(response.success) {
         // Update sessionStorage
         const currentCount = parseInt(sessionStorage.getItem('cartCount') || '0')
         sessionStorage.setItem('cartCount', (currentCount + 1).toString())
         console.log('🛒 ProductGrid: Updated sessionStorage cart count to:', currentCount + 1)
-        
+
         // Show success message
         alert(`${productTitle} added to cart successfully!`)
-        
+
         // Dispatch cart update event to update header counter
         console.log('🛒 ProductGrid: Dispatching cartUpdated event...')
         window.dispatchEvent(new CustomEvent('cartUpdated'))
-        
+
         // Also dispatch cart sync event
         console.log('🛒 ProductGrid: Dispatching cartSync event...')
         window.dispatchEvent(new CustomEvent('cartSync'))
-        
+
         // Also dispatch force sync event
         console.log('🛒 ProductGrid: Dispatching forceCartSync event...')
         window.dispatchEvent(new CustomEvent('forceCartSync'))
-        
+
         console.log('🛒 ProductGrid: Item added to cart:', response.cart_item)
       } else {
         throw new Error(response.error || 'Failed to add to cart')
       }
-    } catch (error) {
+    } catch(error) {
       console.error('🛒 ProductGrid: Error adding to cart:', error)
       alert(`Failed to add ${productTitle} to cart: ${error.message}`)
     } finally {
-      setAddingToCart(prev => ({ ...prev, [productId]: false }))
+      setAddingToCart(prev => ({...prev, [productId]: false}))
     }
   }
 
@@ -175,26 +175,26 @@ const ProductGrid = () => {
   const getProductImage = (product) => {
     console.log('Getting image for product:', product.title)
     console.log('Product data:', product)
-    
+
     // Check if product has image_url from homepage API
-    if (product.image_url) {
+    if(product.image_url) {
       console.log('Using image_url:', product.image_url)
       return product.image_url
     }
-    
+
     // Check if product has primary_image
-    if (product.primary_image && product.primary_image.image_url) {
+    if(product.primary_image && product.primary_image.image_url) {
       console.log('Using primary_image.image_url:', product.primary_image.image_url)
       return product.primary_image.image_url
     }
-    
+
     // Check if product has image field
-    if (product.primary_image && product.primary_image.image) {
+    if(product.primary_image && product.primary_image.image) {
       const fullUrl = `http://127.0.0.1:8000${product.primary_image.image}`
       console.log('Using primary_image.image with full URL:', fullUrl)
       return fullUrl
     }
-    
+
     // Fallback to static image
     console.log('Using fallback static image for:', product.title)
     return "/assets/images/products/1.jpg"
@@ -207,7 +207,7 @@ const ProductGrid = () => {
   }
 
   const formatPrice = (price) => {
-    if (typeof price === 'string') return price
+    if(typeof price === 'string') return price
     return `$${parseFloat(price).toFixed(2)}`
   }
 
@@ -215,32 +215,32 @@ const ProductGrid = () => {
     const stars = []
     const fullStars = Math.floor(rating)
     const hasHalfStar = rating % 1 !== 0
-    
+
     // Full stars
-    for (let i = 0; i < fullStars; i++) {
+    for(let i = 0; i < fullStars; i++) {
       stars.push(<ion-icon key={i} name="star"></ion-icon>)
     }
-    
+
     // Half star
-    if (hasHalfStar) {
+    if(hasHalfStar) {
       stars.push(<ion-icon key="half" name="star-half"></ion-icon>)
     }
-    
+
     // Empty stars
     const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0)
-    for (let i = 0; i < emptyStars; i++) {
+    for(let i = 0; i < emptyStars; i++) {
       stars.push(<ion-icon key={`empty-${i}`} name="star-outline"></ion-icon>)
     }
-    
+
     return stars
   }
 
-  if (loading) {
+  if(loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
         minHeight: '400px',
         fontSize: '18px',
         color: '#666'
@@ -250,12 +250,12 @@ const ProductGrid = () => {
     )
   }
 
-  if (error && products.length === 0) {
+  if(error && products.length === 0) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
         minHeight: '400px',
         fontSize: '18px',
         color: '#dc2626'
@@ -270,28 +270,25 @@ const ProductGrid = () => {
       {products.map((product) => (
         <div key={product.id} className="showcase">
           <div className="showcase-banner">
-            <img 
-              src={getProductImage(product)} 
-              alt={product.image_alt || product.title} 
-              width="300" 
+            <img
+              src={getProductImage(product)}
+              alt={product.image_alt || product.title}
+              width="300"
               className="product-img default"
               onError={(e) => {
                 e.target.src = "/assets/images/products/1.jpg"
               }}
             />
-            <img 
-              src={getProductHoverImage(product)} 
-              alt={product.image_alt || product.title} 
-              width="300" 
+            <img
+              src={getProductHoverImage(product)}
+              alt={product.image_alt || product.title}
+              width="300"
               className="product-img hover"
               onError={(e) => {
                 e.target.src = "/assets/images/products/1.jpg"
               }}
             />
-            
-            <div className={`showcase-badge ${product.badgeType || 'angle'}`}>
-              {product.badge || 'New'}
-            </div>
+
 
             <div className="showcase-actions">
               <button className="btn-action">
@@ -303,9 +300,9 @@ const ProductGrid = () => {
               <button className="btn-action">
                 <ion-icon name="repeat-outline"></ion-icon>
               </button>
-              <button 
+              <button
                 className="btn-action"
-                onClick={() => handleAddToCart(product.id, product.title)}
+                onClick={() => handleAddToCart(product.id, product.title, product.default_variant_id || product.variant_id || null)}
                 disabled={addingToCart[product.id]}
                 title="Add to Cart"
               >
@@ -315,14 +312,14 @@ const ProductGrid = () => {
           </div>
 
           <div className="showcase-content">
-            <a href="#" className="showcase-category">
-              {product.category_name || product.category || 'General'}
-            </a>
             <h3>
-              <a href={`/product/${product.slug}`} className="showcase-title">
+              <a href={`/product/${product.slug}`} className="showcase-category">
                 {product.title}
               </a>
             </h3>
+            <a href="#" className="showcase-title">
+              {product.category_name || product.category || 'General'}
+            </a>
             <div className="showcase-rating">
               {renderStars(product.average_rating || 0)}
               {product.review_count > 0 && (

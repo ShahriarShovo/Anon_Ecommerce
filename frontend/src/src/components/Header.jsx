@@ -95,7 +95,10 @@ const Header = ({ onAuthClick }) => {
                       <span className="count">0</span>
                     </button>
 
-                    <button className="action-btn">
+                    <button 
+                      className="action-btn"
+                      onClick={() => window.location.href = '/cart'}
+                    >
                       <ion-icon name="bag-handle-outline"></ion-icon>
                       <span className="count">0</span>
                     </button>
@@ -265,7 +268,10 @@ const Header = ({ onAuthClick }) => {
           <span className="count">0</span>
         </button>
 
-        <button className="action-btn">
+        <button 
+          className="action-btn"
+          onClick={() => window.location.href = '/cart'}
+        >
           <ion-icon name="bag-handle-outline"></ion-icon>
           <span className="count">0</span>
         </button>

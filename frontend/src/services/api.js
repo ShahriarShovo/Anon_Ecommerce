@@ -10,7 +10,7 @@ class ApiService {
   // Generic request method
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
-    
+
     const config = {
       headers: {
         'Content-Type': 'application/json',
@@ -22,7 +22,7 @@ class ApiService {
 
     // Add Authorization header if token exists
     const token = localStorage.getItem('access_token');
-    if (token) {
+    if(token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
@@ -30,16 +30,34 @@ class ApiService {
       console.log('🌐 API: Making request to:', url, 'with config:', config);
       console.log('🌐 API: Cookies being sent:', document.cookie);
       const response = await fetch(url, config);
-      const data = await response.json();
+
+      // Handle different response types
+      let data = null;
+      const contentType = response.headers.get('content-type');
+
+      if(contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else if(response.status === 204) {
+        // 204 No Content - successful DELETE
+        data = {success: true};
+      } else {
+        // Try to parse as JSON, fallback to text
+        try {
+          data = await response.json();
+        } catch {
+          data = await response.text();
+        }
+      }
+
       console.log('🌐 API: Response status:', response.status, 'Data:', data);
       console.log('🌐 API: Response cookies:', response.headers.get('Set-Cookie'));
 
-      if (!response.ok) {
-        throw new Error(data.message || `HTTP error! status: ${response.status}`);
+      if(!response.ok) {
+        throw new Error(data.message || data || `HTTP error! status: ${response.status}`);
       }
 
       return data;
-    } catch (error) {
+    } catch(error) {
       console.error('🌐 API: Request failed:', error);
       throw error;
     }
@@ -161,6 +179,45 @@ class ApiService {
         quantity: quantity,
         variant_id: variantId
       }),
+    });
+  }
+
+  // Address APIs
+  async getAddresses() {
+    return this.request('/api/orders/addresses/', {
+      method: 'GET',
+    });
+  }
+
+  async createAddress(addressData) {
+    return this.request('/api/orders/addresses/', {
+      method: 'POST',
+      body: JSON.stringify(addressData),
+    });
+  }
+
+  async updateAddress(addressId, addressData) {
+    return this.request(`/api/orders/addresses/${addressId}/`, {
+      method: 'PUT',
+      body: JSON.stringify(addressData),
+    });
+  }
+
+  async deleteAddress(addressId) {
+    return this.request(`/api/orders/addresses/${addressId}/`, {
+      method: 'DELETE',
+    });
+  }
+
+  async setDefaultAddress(addressId) {
+    return this.request(`/api/orders/addresses/${addressId}/set-default/`, {
+      method: 'POST',
+    });
+  }
+
+  async getDefaultAddress() {
+    return this.request('/api/orders/addresses/default/', {
+      method: 'GET',
     });
   }
 

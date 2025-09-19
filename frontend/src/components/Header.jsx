@@ -1,17 +1,15 @@
-import React, { useState, useEffect } from 'react'
-import { useAuth } from '../contexts/AuthContext'
-import { useCategories } from '../contexts/CategoriesContext'
+import React, {useState, useEffect} from 'react'
+import {useAuth} from '../contexts/AuthContext'
+import {useCategories} from '../contexts/CategoriesContext'
 import apiService from '../services/api'
-import CartPage from './CartPage'
 
-const Header = ({ onAuthClick }) => {
-  const { user, isAuthenticated, logout } = useAuth()
-  const { categories, subcategories, loading, getSubCategoriesForCategory } = useCategories()
+const Header = ({onAuthClick}) => {
+  const {user, isAuthenticated, logout} = useAuth()
+  const {categories, subcategories, loading, getSubCategoriesForCategory} = useCategories()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [cartCount, setCartCount] = useState(0)
-  const [isCartOpen, setIsCartOpen] = useState(false)
-  
+
   // Check if we're on admin dashboard
   const isAdminDashboard = window.location.pathname === '/admin-dashboard' || window.location.pathname.startsWith('/admin-dashboard/')
 
@@ -21,64 +19,64 @@ const Header = ({ onAuthClick }) => {
       console.log('🛒 Header: Fetching cart count...')
       const response = await apiService.getCart()
       console.log('🛒 Header: Cart API response:', response)
-      
-      if (response.success && response.cart) {
+
+      if(response.success && response.cart) {
         console.log('🛒 Header: Full cart response:', JSON.stringify(response.cart, null, 2))
-        
+
         // Always calculate count from items as primary method
         const items = response.cart.items || []
         const calculatedCount = items.reduce((sum, item) => sum + (item.quantity || 0), 0)
         const apiCount = response.cart.total_items || 0
-        
+
         console.log('🛒 Header: API total_items:', apiCount)
         console.log('🛒 Header: Calculated from items:', calculatedCount)
         console.log('🛒 Header: Cart ID:', response.cart.id)
         console.log('🛒 Header: Cart items:', items.length)
         console.log('🛒 Header: Cart subtotal:', response.cart.subtotal)
-        
+
         // Use calculated count as primary, API count as fallback
         const finalCount = calculatedCount > 0 ? calculatedCount : apiCount
         console.log('🛒 Header: Setting cart count to:', finalCount)
-        
+
         // Debug: Check if we're using calculated or API count
-        if (calculatedCount > 0 && apiCount === 0) {
+        if(calculatedCount > 0 && apiCount === 0) {
           console.log('🛒 Header: Using calculated count because API total_items is 0')
-        } else if (apiCount > 0) {
+        } else if(apiCount > 0) {
           console.log('🛒 Header: Using API count')
         } else {
           console.log('🛒 Header: Both counts are 0, cart is empty')
         }
-        
+
         // If both counts are 0 but sessionStorage has a count, use sessionStorage
-        if (finalCount === 0) {
+        if(finalCount === 0) {
           const storedCount = sessionStorage.getItem('cartCount')
-          if (storedCount && parseInt(storedCount) > 0) {
+          if(storedCount && parseInt(storedCount) > 0) {
             console.log('🛒 Header: Using sessionStorage count as fallback:', storedCount)
             setCartCount(parseInt(storedCount))
             return
           }
         }
-        
+
         // If calculated count is 0 but sessionStorage has count, use sessionStorage
-        if (calculatedCount === 0 && apiCount === 0) {
+        if(calculatedCount === 0 && apiCount === 0) {
           const storedCount = sessionStorage.getItem('cartCount')
-          if (storedCount && parseInt(storedCount) > 0) {
+          if(storedCount && parseInt(storedCount) > 0) {
             console.log('🛒 Header: Session mismatch detected, using sessionStorage count:', storedCount)
             setCartCount(parseInt(storedCount))
             return
           }
         }
-        
+
         // If both counts are 0 but sessionStorage has count, use sessionStorage
-        if (finalCount === 0) {
+        if(finalCount === 0) {
           const storedCount = sessionStorage.getItem('cartCount')
-          if (storedCount && parseInt(storedCount) > 0) {
+          if(storedCount && parseInt(storedCount) > 0) {
             console.log('🛒 Header: Using sessionStorage count as fallback:', storedCount)
             setCartCount(parseInt(storedCount))
             return
           }
         }
-        
+
         // Debug: Log the full cart response structure
         console.log('🛒 Header: Full cart response structure:', {
           id: response.cart.id,
@@ -91,16 +89,16 @@ const Header = ({ onAuthClick }) => {
             product_title: item.product?.title
           })) || []
         })
-        
+
         // Debug: Check if we're using calculated or API count
-        if (calculatedCount > 0 && apiCount === 0) {
+        if(calculatedCount > 0 && apiCount === 0) {
           console.log('🛒 Header: Using calculated count because API total_items is 0')
-        } else if (apiCount > 0) {
+        } else if(apiCount > 0) {
           console.log('🛒 Header: Using API count')
         } else {
           console.log('🛒 Header: Both counts are 0, cart is empty')
         }
-        
+
         // Store cart count in sessionStorage as backup
         sessionStorage.setItem('cartCount', finalCount.toString())
         setCartCount(finalCount)
@@ -108,18 +106,18 @@ const Header = ({ onAuthClick }) => {
         console.log('🛒 Header: Cart API failed or no cart data')
         // Try to get from sessionStorage
         const storedCount = sessionStorage.getItem('cartCount')
-        if (storedCount) {
+        if(storedCount) {
           console.log('🛒 Header: Using stored cart count:', storedCount)
           setCartCount(parseInt(storedCount))
         } else {
           setCartCount(0)
         }
       }
-    } catch (error) {
+    } catch(error) {
       console.error('🛒 Header: Error fetching cart count:', error)
       // Try to get from sessionStorage
       const storedCount = sessionStorage.getItem('cartCount')
-      if (storedCount) {
+      if(storedCount) {
         console.log('🛒 Header: Using stored cart count on error:', storedCount)
         setCartCount(parseInt(storedCount))
       } else {
@@ -132,28 +130,28 @@ const Header = ({ onAuthClick }) => {
   useEffect(() => {
     // First try to get from sessionStorage
     const storedCount = sessionStorage.getItem('cartCount')
-    if (storedCount) {
+    if(storedCount) {
       console.log('🛒 Header: Using stored cart count on mount:', storedCount)
       setCartCount(parseInt(storedCount))
     }
-    
+
     // Then fetch from API
     fetchCartCount()
   }, [])
-  
+
   // Add a function to sync sessionStorage with cart count
   const syncCartCount = () => {
     const storedCount = sessionStorage.getItem('cartCount')
-    if (storedCount) {
+    if(storedCount) {
       console.log('🛒 Header: Syncing cart count from sessionStorage:', storedCount)
       setCartCount(parseInt(storedCount))
     }
   }
-  
+
   // Add a function to force sync from sessionStorage
   const forceSyncFromSessionStorage = () => {
     const storedCount = sessionStorage.getItem('cartCount')
-    if (storedCount && parseInt(storedCount) > 0) {
+    if(storedCount && parseInt(storedCount) > 0) {
       console.log('🛒 Header: Force syncing from sessionStorage:', storedCount)
       setCartCount(parseInt(storedCount))
     }
@@ -168,84 +166,84 @@ const Header = ({ onAuthClick }) => {
         fetchCartCount()
       }, 200)
     }
-    
+
     // Add a function to check if we should skip API call
     const shouldSkipApiCall = () => {
       const storedCount = sessionStorage.getItem('cartCount')
       return storedCount && parseInt(storedCount) > 0
     }
-    
+
     // Also listen for sessionStorage changes
     const handleStorageChange = (e) => {
-      if (e.key === 'cartCount') {
+      if(e.key === 'cartCount') {
         console.log('🛒 Header: sessionStorage cartCount changed to:', e.newValue)
-        if (e.newValue) {
+        if(e.newValue) {
           setCartCount(parseInt(e.newValue))
         }
       }
     }
-    
+
     window.addEventListener('storage', handleStorageChange)
-    
+
     // Also listen for custom cart sync events
     const handleCartSync = () => {
       console.log('🛒 Header: Cart sync event received!')
       syncCartCount()
     }
-    
+
     window.addEventListener('cartSync', handleCartSync)
-    
+
     // Also listen for force sync events
     const handleForceSync = () => {
       console.log('🛒 Header: Force sync event received!')
       forceSyncFromSessionStorage()
     }
-    
+
     window.addEventListener('forceCartSync', handleForceSync)
 
     // Listen for cart updates from any component
     window.addEventListener('cartUpdated', handleCartUpdate)
     console.log('🛒 Header: Added cartUpdated event listener')
-    
+
     // Also listen for cart updates when cart modal is open/closed
     const handleCartModalChange = () => {
       console.log('🛒 Header: Cart modal change event received!')
       // Small delay to ensure cart data is updated
       setTimeout(() => {
         // Skip API call if we have sessionStorage count
-        if (shouldSkipApiCall()) {
+        if(shouldSkipApiCall()) {
           console.log('🛒 Header: Skipping API call on modal change, using sessionStorage count')
           const storedCount = sessionStorage.getItem('cartCount')
-          if (storedCount) {
+          if(storedCount) {
             setCartCount(parseInt(storedCount))
           }
           return
         }
-        
+
         fetchCartCount()
       }, 100)
     }
-    
+
     window.addEventListener('cartModalOpened', handleCartModalChange)
     window.addEventListener('cartModalClosed', handleCartModalChange)
-    
+
     // Poll cart count every 30 seconds as backup (reduced frequency)
     const pollInterval = setInterval(() => {
       console.log('🛒 Header: Polling cart count...')
-      
+
       // Skip API call if we have sessionStorage count
-      if (shouldSkipApiCall()) {
+      if(shouldSkipApiCall()) {
         console.log('🛒 Header: Skipping API call, using sessionStorage count')
         const storedCount = sessionStorage.getItem('cartCount')
-        if (storedCount) {
+        if(storedCount) {
           setCartCount(parseInt(storedCount))
         }
         return
       }
-      
+
       fetchCartCount()
     }, 30000)
-    
+
     return () => {
       window.removeEventListener('cartUpdated', handleCartUpdate)
       window.removeEventListener('cartModalOpened', handleCartModalChange)
@@ -260,17 +258,18 @@ const Header = ({ onAuthClick }) => {
 
   // Handle cart button click
   const handleCartClick = () => {
-    setIsCartOpen(true)
-    // Dispatch cart modal opened event
-    window.dispatchEvent(new CustomEvent('cartModalOpened'))
+    console.log('🛒 Header: Cart button clicked!')
+    console.log('🛒 Header: Current URL:', window.location.href)
+    console.log('🛒 Header: Current path:', window.location.pathname)
+
+    // Debug alert
+    alert('Cart button clicked! Should redirect to /cart')
+
+    // Navigate to cart page
+    window.location.replace('/cart')
+    console.log('🛒 Header: Navigation called')
   }
 
-  // Handle cart close
-  const handleCartClose = () => {
-    setIsCartOpen(false)
-    // Dispatch cart modal closed event
-    window.dispatchEvent(new CustomEvent('cartModalClosed'))
-  }
 
   return (
     <header>
@@ -318,222 +317,218 @@ const Header = ({ onAuthClick }) => {
             </button>
           </div>
 
-              <div className="header-user-actions">
-                {isAuthenticated ? (
-                  <div className="user-menu">
-                    <div className="user-profile-section">
-                      <button 
-                        className="action-btn user-profile"
-                        onClick={() => {
-                          console.log('User type:', user?.is_staff, user?.is_superuser) // Debug log
-                          // Check if user is admin/staff and redirect accordingly
-                          if (user?.is_staff || user?.is_superuser) {
-                            console.log('Navigating to admin dashboard') // Debug log
-                            window.location.replace('/admin-dashboard')
-                          } else {
-                            console.log('Navigating to user dashboard') // Debug log
-                            window.location.replace('/dashboard')
-                          }
-                        }}
-                      >
-                        <ion-icon name="person-outline"></ion-icon>
-                      </button>
-                      <span className="user-name">{user?.full_name || user?.email}</span>
-                    </div>
-                    
-                    <button className="action-btn logout-btn" onClick={logout}>
-                      <ion-icon name="log-out-outline"></ion-icon>
-                    </button>
-                  </div>
-                ) : (
-                  <button className="action-btn" onClick={onAuthClick}>
+          <div className="header-user-actions">
+            {isAuthenticated ? (
+              <div className="user-menu">
+                <div className="user-profile-section">
+                  <button
+                    className="action-btn user-profile"
+                    onClick={() => {
+                      console.log('User type:', user?.is_staff, user?.is_superuser) // Debug log
+                      // Check if user is admin/staff and redirect accordingly
+                      if(user?.is_staff || user?.is_superuser) {
+                        console.log('Navigating to admin dashboard') // Debug log
+                        window.location.replace('/admin-dashboard')
+                      } else {
+                        console.log('Navigating to user dashboard') // Debug log
+                        window.location.replace('/dashboard')
+                      }
+                    }}
+                  >
                     <ion-icon name="person-outline"></ion-icon>
                   </button>
-                )}
-
-                {/* Hide cart and wishlist on admin dashboard */}
-                {!isAdminDashboard && (
-                  <>
-                    <button className="action-btn">
-                      <ion-icon name="heart-outline"></ion-icon>
-                      <span className="count">0</span>
-                    </button>
-
-                    <button className="action-btn" onClick={handleCartClick}>
-                      <ion-icon name="bag-handle-outline"></ion-icon>
-                      <span className="count">{cartCount}</span>
-                    </button>
-                  </>
-                )}
+                  <span className="user-name">{user?.full_name || user?.email}</span>
+                </div>
               </div>
+            ) : (
+              <button className="action-btn" onClick={onAuthClick}>
+                <ion-icon name="person-outline"></ion-icon>
+              </button>
+            )}
+
+            {/* Hide cart and wishlist on admin dashboard */}
+            {!isAdminDashboard && (
+              <>
+                <button className="action-btn">
+                  <ion-icon name="heart-outline"></ion-icon>
+                  <span className="count">0</span>
+                </button>
+
+                <button className="action-btn" onClick={handleCartClick}>
+                  <ion-icon name="bag-handle-outline"></ion-icon>
+                  <span className="count">{cartCount}</span>
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Desktop Navigation - Hide on admin dashboard */}
       {!isAdminDashboard && (
         <nav className="desktop-navigation-menu">
-        <div className="container">
-          <ul className="desktop-menu-category-list">
-            <li className="menu-category">
-              <a href="#" className="menu-title">Home</a>
-            </li>
+          <div className="container">
+            <ul className="desktop-menu-category-list">
+              <li className="menu-category">
+                <a href="#" className="menu-title">Home</a>
+              </li>
 
-            <li className="menu-category">
-              <a href="#" className="menu-title">Categories</a>
-              <div className="dropdown-panel">
-                {loading ? (
-                  <div style={{ padding: '20px', textAlign: 'center' }}>
-                    <p>Loading categories...</p>
-                  </div>
-                ) : (
-                  categories.map((category, index) => {
-                    const categorySubcategories = getSubCategoriesForCategory(category.slug)
-                    return (
-                      <ul key={category.id} className="dropdown-panel-list">
-                        <li className="menu-title">
-                          <a href={`/category/${category.slug}`}>{category.name}</a>
-                        </li>
-                        {categorySubcategories.slice(0, 5).map((subcategory) => (
-                          <li key={subcategory.id} className="panel-list-item">
-                            <a href={`/subcategory/${subcategory.slug}`}>{subcategory.name}</a>
+              <li className="menu-category">
+                <a href="#" className="menu-title">Categories</a>
+                <div className="dropdown-panel">
+                  {loading ? (
+                    <div style={{padding: '20px', textAlign: 'center'}}>
+                      <p>Loading categories...</p>
+                    </div>
+                  ) : (
+                    categories.map((category, index) => {
+                      const categorySubcategories = getSubCategoriesForCategory(category.slug)
+                      return (
+                        <ul key={category.id} className="dropdown-panel-list">
+                          <li className="menu-title">
+                            <a href={`/category/${category.slug}`}>{category.name}</a>
                           </li>
-                        ))}
-                        {categorySubcategories.length > 5 && (
-                          <li className="panel-list-item">
-                            <a href={`/category/${category.slug}`} style={{ fontWeight: 'bold', color: '#6366f1' }}>
-                              View All ({categorySubcategories.length})
-                            </a>
-                          </li>
-                        )}
-                        {index === 0 && (
-                          <li className="panel-list-item">
-                            
-                          </li>
-                        )}
-                      </ul>
-                    )
-                  })
-                )}
-              </div>
-            </li>
+                          {categorySubcategories.slice(0, 5).map((subcategory) => (
+                            <li key={subcategory.id} className="panel-list-item">
+                              <a href={`/subcategory/${subcategory.slug}`}>{subcategory.name}</a>
+                            </li>
+                          ))}
+                          {categorySubcategories.length > 5 && (
+                            <li className="panel-list-item">
+                              <a href={`/category/${category.slug}`} style={{fontWeight: 'bold', color: '#6366f1'}}>
+                                View All ({categorySubcategories.length})
+                              </a>
+                            </li>
+                          )}
+                          {index === 0 && (
+                            <li className="panel-list-item">
 
-            <li className="menu-category">
-              <a href="#" className="menu-title">Men's</a>
-              <div className="dropdown-list">
-                <ul className="dropdown-list">
-                  <li className="dropdown-item">
-                    <a href="#">Shirt</a>
-                  </li>
-                  <li className="dropdown-item">
-                    <a href="#">Shorts & Jeans</a>
-                  </li>
-                  <li className="dropdown-item">
-                    <a href="#">Safety Shoes</a>
-                  </li>
-                  <li className="dropdown-item">
-                    <a href="#">Wallet</a>
-                  </li>
-                </ul>
-              </div>
-            </li>
+                            </li>
+                          )}
+                        </ul>
+                      )
+                    })
+                  )}
+                </div>
+              </li>
 
-            <li className="menu-category">
-              <a href="#" className="menu-title">Women's</a>
-              <div className="dropdown-list">
-                <ul className="dropdown-list">
-                  <li className="dropdown-item">
-                    <a href="#">Dress & Frock</a>
-                  </li>
-                  <li className="dropdown-item">
-                    <a href="#">Earrings</a>
-                  </li>
-                  <li className="dropdown-item">
-                    <a href="#">Perfume</a>
-                  </li>
-                  <li className="dropdown-item">
-                    <a href="#">Cosmetics</a>
-                  </li>
-                </ul>
-              </div>
-            </li>
+              <li className="menu-category">
+                <a href="#" className="menu-title">Men's</a>
+                <div className="dropdown-list">
+                  <ul className="dropdown-list">
+                    <li className="dropdown-item">
+                      <a href="#">Shirt</a>
+                    </li>
+                    <li className="dropdown-item">
+                      <a href="#">Shorts & Jeans</a>
+                    </li>
+                    <li className="dropdown-item">
+                      <a href="#">Safety Shoes</a>
+                    </li>
+                    <li className="dropdown-item">
+                      <a href="#">Wallet</a>
+                    </li>
+                  </ul>
+                </div>
+              </li>
 
-            <li className="menu-category">
-              <a href="#" className="menu-title">Jewelry</a>
-              <div className="dropdown-list">
-                <ul className="dropdown-list">
-                  <li className="dropdown-item">
-                    <a href="#">Earrings</a>
-                  </li>
-                  <li className="dropdown-item">
-                    <a href="#">Couple Rings</a>
-                  </li>
-                  <li className="dropdown-item">
-                    <a href="#">Necklace</a>
-                  </li>
-                  <li className="dropdown-item">
-                    <a href="#">Bracelets</a>
-                  </li>
-                </ul>
-              </div>
-            </li>
+              <li className="menu-category">
+                <a href="#" className="menu-title">Women's</a>
+                <div className="dropdown-list">
+                  <ul className="dropdown-list">
+                    <li className="dropdown-item">
+                      <a href="#">Dress & Frock</a>
+                    </li>
+                    <li className="dropdown-item">
+                      <a href="#">Earrings</a>
+                    </li>
+                    <li className="dropdown-item">
+                      <a href="#">Perfume</a>
+                    </li>
+                    <li className="dropdown-item">
+                      <a href="#">Cosmetics</a>
+                    </li>
+                  </ul>
+                </div>
+              </li>
 
-            <li className="menu-category">
-              <a href="#" className="menu-title">Perfume</a>
-              <div className="dropdown-list">
-                <ul className="dropdown-list">
-                  <li className="dropdown-item">
-                    <a href="#">Clothes Perfume</a>
-                  </li>
-                  <li className="dropdown-item">
-                    <a href="#">Deodorant</a>
-                  </li>
-                  <li className="dropdown-item">
-                    <a href="#">Jacket</a>
-                  </li>
-                  <li className="dropdown-item">
-                    <a href="#">Dress & Frock</a>
-                  </li>
-                </ul>
-              </div>
-            </li>
+              <li className="menu-category">
+                <a href="#" className="menu-title">Jewelry</a>
+                <div className="dropdown-list">
+                  <ul className="dropdown-list">
+                    <li className="dropdown-item">
+                      <a href="#">Earrings</a>
+                    </li>
+                    <li className="dropdown-item">
+                      <a href="#">Couple Rings</a>
+                    </li>
+                    <li className="dropdown-item">
+                      <a href="#">Necklace</a>
+                    </li>
+                    <li className="dropdown-item">
+                      <a href="#">Bracelets</a>
+                    </li>
+                  </ul>
+                </div>
+              </li>
 
-            <li className="menu-category">
-              <a href="#" className="menu-title">Blog</a>
-            </li>
+              <li className="menu-category">
+                <a href="#" className="menu-title">Perfume</a>
+                <div className="dropdown-list">
+                  <ul className="dropdown-list">
+                    <li className="dropdown-item">
+                      <a href="#">Clothes Perfume</a>
+                    </li>
+                    <li className="dropdown-item">
+                      <a href="#">Deodorant</a>
+                    </li>
+                    <li className="dropdown-item">
+                      <a href="#">Jacket</a>
+                    </li>
+                    <li className="dropdown-item">
+                      <a href="#">Dress & Frock</a>
+                    </li>
+                  </ul>
+                </div>
+              </li>
 
-            <li className="menu-category">
-              <a href="#" className="menu-title">Hot Offers</a>
-            </li>
-          </ul>
-        </div>
-      </nav>
+              <li className="menu-category">
+                <a href="#" className="menu-title">Blog</a>
+              </li>
+
+              <li className="menu-category">
+                <a href="#" className="menu-title">Hot Offers</a>
+              </li>
+            </ul>
+          </div>
+        </nav>
       )}
 
       {/* Mobile Bottom Navigation - Hide on admin dashboard */}
       {!isAdminDashboard && (
         <div className="mobile-bottom-navigation">
-        <button className="action-btn" data-mobile-menu-open-btn>
-          <ion-icon name="menu-outline"></ion-icon>
-        </button>
+          <button className="action-btn" data-mobile-menu-open-btn>
+            <ion-icon name="menu-outline"></ion-icon>
+          </button>
 
-        <button className="action-btn">
-          <ion-icon name="home-outline"></ion-icon>
-        </button>
+          <button className="action-btn">
+            <ion-icon name="home-outline"></ion-icon>
+          </button>
 
-        <button className="action-btn">
-          <ion-icon name="grid-outline"></ion-icon>
-        </button>
+          <button className="action-btn">
+            <ion-icon name="grid-outline"></ion-icon>
+          </button>
 
-        <button className="action-btn">
-          <ion-icon name="heart-outline"></ion-icon>
-          <span className="count">0</span>
-        </button>
+          <button className="action-btn">
+            <ion-icon name="heart-outline"></ion-icon>
+            <span className="count">0</span>
+          </button>
 
-        <button className="action-btn" onClick={handleCartClick}>
-          <ion-icon name="bag-handle-outline"></ion-icon>
-          <span className="count">{cartCount}</span>
-        </button>
-      </div>
+          <button className="action-btn" onClick={handleCartClick}>
+            <ion-icon name="bag-handle-outline"></ion-icon>
+            <span className="count">{cartCount}</span>
+          </button>
+        </div>
       )}
 
       {/* Mobile Navigation Menu */}
@@ -548,7 +543,7 @@ const Header = ({ onAuthClick }) => {
         <ul className="mobile-menu-category-list">
           {loading ? (
             <li className="menu-category">
-              <div style={{ padding: '20px', textAlign: 'center' }}>
+              <div style={{padding: '20px', textAlign: 'center'}}>
                 <p>Loading categories...</p>
               </div>
             </li>
@@ -575,7 +570,7 @@ const Header = ({ onAuthClick }) => {
                     ))}
                     {categorySubcategories.length === 0 && (
                       <li className="submenu-category">
-                        <span className="submenu-title" style={{ color: '#9ca3af' }}>
+                        <span className="submenu-title" style={{color: '#9ca3af'}}>
                           No subcategories available
                         </span>
                       </li>
@@ -650,11 +645,6 @@ const Header = ({ onAuthClick }) => {
         </div>
       </nav>
 
-      {/* Cart Popup */}
-      <CartPage 
-        isOpen={isCartOpen} 
-        onClose={handleCartClose}
-      />
     </header>
   )
 }

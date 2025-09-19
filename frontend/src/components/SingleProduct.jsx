@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react'
+import React, {useState, useEffect} from 'react'
 import apiService from '../services/api'
-import { useAuth } from '../contexts/AuthContext'
-import { LoginModal } from './authentication'
+import {useAuth} from '../contexts/AuthContext'
+import {LoginModal} from './authentication'
 
 const SingleProduct = () => {
   // Get slug from URL path
   const currentPath = window.location.pathname
   const slug = currentPath.split('/product/')[1]
-  
+
   // Get authentication context
-  const { user, isAuthenticated } = useAuth()
-  
+  const {user, isAuthenticated} = useAuth()
+
   const [product, setProduct] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -20,6 +20,7 @@ const SingleProduct = () => {
   const [showReviewForm, setShowReviewForm] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [addingToCart, setAddingToCart] = useState(false)
+  const [quantity, setQuantity] = useState(1)
   const [reviewForm, setReviewForm] = useState({
     rating: 5,
     title: '',
@@ -29,7 +30,7 @@ const SingleProduct = () => {
   })
 
   useEffect(() => {
-    if (slug) {
+    if(slug) {
       fetchProduct()
       fetchReviews()
     }
@@ -37,15 +38,15 @@ const SingleProduct = () => {
 
   // Pre-fill review form with user data when authenticated
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if(isAuthenticated && user) {
       setReviewForm(prev => ({
         ...prev,
         user_name: user.full_name || user.email || '',
         user_email: user.email || ''
       }))
-      
+
       // If user just logged in and auth modal was open, open review form
-      if (showAuthModal) {
+      if(showAuthModal) {
         setShowAuthModal(false)
         setShowReviewForm(true)
       }
@@ -56,17 +57,19 @@ const SingleProduct = () => {
     try {
       setLoading(true)
       const response = await apiService.getSingleProduct(slug)
-      
-      if (response.success) {
+
+      if(response.success) {
+        console.log('🌟 Product data received:', response.product)
+        console.log('🌟 Product average_rating:', response.product.average_rating)
         setProduct(response.product)
         // Set first variant as default if available
-        if (response.product.variants && response.product.variants.length > 0) {
+        if(response.product.variants && response.product.variants.length > 0) {
           setSelectedVariant(response.product.variants[0])
         }
       } else {
         throw new Error(response.error || 'Failed to fetch product')
       }
-    } catch (error) {
+    } catch(error) {
       console.error('Error fetching product:', error)
       setError('Failed to load product')
     } finally {
@@ -75,17 +78,22 @@ const SingleProduct = () => {
   }
 
   const formatPrice = (price) => {
-    if (typeof price === 'string') return price
+    if(typeof price === 'string') return price
     return `$${parseFloat(price).toFixed(2)}`
   }
 
   const fetchReviews = async () => {
     try {
       const response = await apiService.getProductReviews(slug)
-      if (response.success) {
+      if(response.success) {
+        console.log('🌟 Reviews API response:', response)
         setReviews(response.reviews)
+        // Update product with rating from reviews API
+        if(response.average_rating !== undefined) {
+          setProduct(prev => prev ? {...prev, average_rating: response.average_rating} : null)
+        }
       }
-    } catch (error) {
+    } catch(error) {
       console.error('Error fetching reviews:', error)
     }
   }
@@ -94,11 +102,24 @@ const SingleProduct = () => {
     setSelectedVariant(variant)
   }
 
+  const handleQuantityIncrease = () => {
+    setQuantity(prev => prev + 1)
+  }
+
+  const handleQuantityDecrease = () => {
+    setQuantity(prev => Math.max(1, prev - 1))
+  }
+
+  const handleQuantityChange = (e) => {
+    const value = parseInt(e.target.value) || 1
+    setQuantity(Math.max(1, value))
+  }
+
   const handleReviewSubmit = async (e) => {
     e.preventDefault()
     try {
       const response = await apiService.createProductReview(slug, reviewForm)
-      if (response.success) {
+      if(response.success) {
         setShowReviewForm(false)
         setReviewForm({
           rating: 5,
@@ -110,14 +131,14 @@ const SingleProduct = () => {
         fetchReviews() // Refresh reviews
         alert('Review submitted successfully!')
       }
-    } catch (error) {
+    } catch(error) {
       console.error('Error submitting review:', error)
       alert('Failed to submit review. Please try again.')
     }
   }
 
   const handleReviewInputChange = (e) => {
-    const { name, value } = e.target
+    const {name, value} = e.target
     setReviewForm(prev => ({
       ...prev,
       [name]: value
@@ -126,41 +147,41 @@ const SingleProduct = () => {
 
   // Add to cart function
   const handleAddToCart = async () => {
-    if (!product) return
+    if(!product) return
 
     try {
       setAddingToCart(true)
-      
+
       const response = await apiService.addToCart(
-        product.id, 
-        1, 
+        product.id,
+        quantity,
         selectedVariant ? selectedVariant.id : null
       )
-      
-      if (response.success) {
+
+      if(response.success) {
         // Update sessionStorage
         const currentCount = parseInt(sessionStorage.getItem('cartCount') || '0')
-        sessionStorage.setItem('cartCount', (currentCount + 1).toString())
-        console.log('🛒 SingleProduct: Updated sessionStorage cart count to:', currentCount + 1)
-        
+        sessionStorage.setItem('cartCount', (currentCount + quantity).toString())
+        console.log('🛒 SingleProduct: Updated sessionStorage cart count to:', currentCount + quantity)
+
         alert(`${product.title} added to cart successfully!`)
-        
+
         // Dispatch cart update event to update header counter
         window.dispatchEvent(new CustomEvent('cartUpdated'))
-        
+
         // Also dispatch cart sync event
         console.log('🛒 SingleProduct: Dispatching cartSync event...')
         window.dispatchEvent(new CustomEvent('cartSync'))
-        
+
         // Also dispatch force sync event
         console.log('🛒 SingleProduct: Dispatching forceCartSync event...')
         window.dispatchEvent(new CustomEvent('forceCartSync'))
-        
+
         console.log('Item added to cart:', response.cart_item)
       } else {
         throw new Error(response.error || 'Failed to add to cart')
       }
-    } catch (error) {
+    } catch(error) {
       console.error('Error adding to cart:', error)
       alert(`Failed to add ${product.title} to cart: ${error.message}`)
     } finally {
@@ -169,29 +190,41 @@ const SingleProduct = () => {
   }
 
   const renderStars = (rating, interactive = false, onChange = null) => {
+    const numRating = parseFloat(rating) || 0
+    console.log('🌟 renderStars called with rating:', rating, 'parsed:', numRating)
     return (
       <div className="star-rating">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <button
-            key={star}
-            type={interactive ? "button" : undefined}
-            className={`star ${star <= rating ? 'filled' : ''}`}
-            onClick={interactive ? () => onChange && onChange(star) : undefined}
-            disabled={!interactive}
-          >
-            <ion-icon name="star"></ion-icon>
-          </button>
-        ))}
+        {[1, 2, 3, 4, 5].map((star) => {
+          let starClass = 'star'
+          if(star <= Math.floor(numRating)) {
+            starClass += ' filled'
+          } else if(star === Math.ceil(numRating) && numRating % 1 !== 0) {
+            starClass += ' half-filled'
+          }
+
+          return (
+            <button
+              key={star}
+              type={interactive ? "button" : undefined}
+              className={starClass}
+              onClick={interactive ? () => onChange && onChange(star) : undefined}
+              disabled={!interactive}
+            >
+              <ion-icon name="star"></ion-icon>
+              <span style={{display: 'block', position: 'absolute', top: 0, left: 0}}>★</span>
+            </button>
+          )
+        })}
       </div>
     )
   }
 
-  if (loading) {
+  if(loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
         minHeight: '400px',
         fontSize: '18px',
         color: '#666'
@@ -201,12 +234,12 @@ const SingleProduct = () => {
     )
   }
 
-  if (error || !product) {
+  if(error || !product) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
         minHeight: '400px',
         fontSize: '18px',
         color: '#dc2626'
@@ -216,31 +249,33 @@ const SingleProduct = () => {
     )
   }
 
-  const currentPrice = selectedVariant ? selectedVariant.price : product.price
-  const currentOldPrice = selectedVariant ? selectedVariant.old_price : product.old_price
+  const basePrice = selectedVariant ? selectedVariant.price : product.price
+  const baseOldPrice = selectedVariant ? selectedVariant.old_price : product.old_price
+  const currentPrice = basePrice * quantity
+  const currentOldPrice = baseOldPrice ? baseOldPrice * quantity : null
 
   return (
     <div className="single-product">
       {/* Auth Modal */}
-      <LoginModal 
-        isOpen={showAuthModal} 
-        onClose={() => setShowAuthModal(false)} 
+      <LoginModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
       />
-      
+
       <div className="container">
         <div className="product-detail">
           <div className="product-gallery">
             {/* Main Image */}
             <div className="main-image">
               {product.images && product.images.length > 0 ? (
-                <img 
-                  src={product.images[selectedImage]?.image_url} 
+                <img
+                  src={product.images[selectedImage]?.image_url}
                   alt={product.images[selectedImage]?.alt_text || product.title}
                   className="product-main-img"
                 />
               ) : (
-                <img 
-                  src="/assets/images/products/1.jpg" 
+                <img
+                  src="/assets/images/products/1.jpg"
                   alt={product.title}
                   className="product-main-img"
                 />
@@ -264,34 +299,45 @@ const SingleProduct = () => {
           </div>
 
           <div className="product-info">
-            {/* Breadcrumb */}
-            <div className="breadcrumb">
-              <a href="/">Home</a>
-              {product.category && (
-                <>
-                  <span> / </span>
-                  <a href="#">{product.category.name}</a>
-                </>
-              )}
-              <span> / </span>
-              <span>{product.title}</span>
-            </div>
 
             {/* Product Title */}
             <h1 className="product-title">{product.title}</h1>
 
             {/* Rating */}
             <div className="product-rating">
-              {renderStars(4.5)}
-              <span className="rating-text">(4.5) {reviews.length} Reviews</span>
+              {renderStars(product.average_rating || 0)}
+              <span className="rating-text">({product.average_rating || 0}) {reviews.length} Reviews</span>
             </div>
 
             {/* Price */}
             <div className="product-price">
-              <span className="current-price">{formatPrice(currentPrice)}</span>
+              <div className="price-row">
+                <span className="price-label">Unit Price:</span>
+                <span className="unit-price">{formatPrice(basePrice)}</span>
+              </div>
+              <div className="price-row">
+                <span className="price-label">Total Price:</span>
+                <span className="current-price">{formatPrice(currentPrice)}</span>
+              </div>
               {currentOldPrice && (
-                <span className="old-price">{formatPrice(currentOldPrice)}</span>
+                <div className="price-row">
+                  <span className="price-label">Total Old Price:</span>
+                  <span className="old-price">{formatPrice(currentOldPrice)}</span>
+                </div>
               )}
+            </div>
+
+            {/* Product Details */}
+            <div className="product-details">
+              <div className="detail-item">
+                <strong>SKU:</strong> {selectedVariant?.sku || 'N/A'}
+              </div>
+              <div className="detail-item">
+                <strong>Category:</strong> {product.category?.name || 'N/A'}
+              </div>
+              <div className="detail-item">
+                <strong>Stock:</strong> {selectedVariant?.quantity || product.quantity} available
+              </div>
             </div>
 
             {/* Description */}
@@ -321,13 +367,32 @@ const SingleProduct = () => {
 
             {/* Quantity and Add to Cart */}
             <div className="product-actions">
-              <div className="quantity-selector">
-                <button className="qty-btn">-</button>
-                <input type="number" defaultValue="1" min="1" className="qty-input" readOnly />
-                <button className="qty-btn">+</button>
+              <div className="qty-container">
+                <button
+                  className="qty-btn-minus btn-light"
+                  type="button"
+                  onClick={handleQuantityDecrease}
+                  disabled={quantity <= 1}
+                >
+                  −
+                </button>
+                <input
+                  type="text"
+                  name="qty"
+                  value={quantity}
+                  className="input-qty"
+                  onChange={handleQuantityChange}
+                />
+                <button
+                  className="qty-btn-plus btn-light"
+                  type="button"
+                  onClick={handleQuantityIncrease}
+                >
+                  +
+                </button>
               </div>
-              
-              <button 
+
+              <button
                 className="add-to-cart-btn"
                 onClick={handleAddToCart}
                 disabled={addingToCart}
@@ -335,24 +400,12 @@ const SingleProduct = () => {
                 <ion-icon name={addingToCart ? "hourglass-outline" : "bag-add-outline"}></ion-icon>
                 {addingToCart ? "Adding..." : "Add to Cart"}
               </button>
-              
+
               <button className="wishlist-btn">
                 <ion-icon name="heart-outline"></ion-icon>
               </button>
             </div>
 
-            {/* Product Details */}
-            <div className="product-details">
-              <div className="detail-item">
-                <strong>SKU:</strong> {selectedVariant?.sku || 'N/A'}
-              </div>
-              <div className="detail-item">
-                <strong>Category:</strong> {product.category?.name || 'N/A'}
-              </div>
-              <div className="detail-item">
-                <strong>Stock:</strong> {selectedVariant?.quantity || product.quantity} available
-              </div>
-            </div>
           </div>
         </div>
 
@@ -362,14 +415,14 @@ const SingleProduct = () => {
             <div className="reviews-header">
               <h2>Customer Reviews</h2>
               {isAuthenticated ? (
-                <button 
+                <button
                   className="write-review-btn"
                   onClick={() => setShowReviewForm(!showReviewForm)}
                 >
                   Write a Review
                 </button>
               ) : (
-                <button 
+                <button
                   className="write-review-btn"
                   onClick={() => setShowAuthModal(true)}
                 >
@@ -383,11 +436,11 @@ const SingleProduct = () => {
               <div className="review-form-container">
                 <form className="review-form" onSubmit={handleReviewSubmit}>
                   <h3>Write Your Review</h3>
-                  
+
                   <div className="form-group">
                     <label>Rating *</label>
-                    {renderStars(reviewForm.rating, true, (rating) => 
-                      setReviewForm(prev => ({ ...prev, rating }))
+                    {renderStars(reviewForm.rating, true, (rating) =>
+                      setReviewForm(prev => ({...prev, rating}))
                     )}
                   </div>
 
@@ -482,13 +535,13 @@ const SingleProduct = () => {
                         {renderStars(review.rating)}
                       </div>
                     </div>
-                    
+
                     {review.title && (
                       <h5 className="review-title">{review.title}</h5>
                     )}
-                    
+
                     <p className="review-comment">{review.comment}</p>
-                    
+
                     {review.is_verified_purchase && (
                       <span className="verified-badge">
                         <ion-icon name="checkmark-circle"></ion-icon>

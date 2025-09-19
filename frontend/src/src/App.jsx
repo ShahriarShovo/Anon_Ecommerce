@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
-import { AuthProvider } from './contexts/AuthContext'
-import { CategoriesProvider } from './contexts/CategoriesContext'
+import React, {useState, useEffect} from 'react'
+import {AuthProvider} from './contexts/AuthContext'
+import {CategoriesProvider} from './contexts/CategoriesContext'
 import Header from './components/Header'
 import Banner from './components/Banner'
 import ProductContainer from './components/ProductContainer'
@@ -8,22 +8,45 @@ import Blog from './components/Blog'
 import Footer from './components/Footer'
 import Modal from './components/Modal'
 import NotificationToast from './components/NotificationToast'
-import { LoginModal } from './components/authentication'
+import {LoginModal} from './components/authentication'
 import ProfilePage from './components/authentication/customer/ProfilePage'
 import UserDashboard from './components/authentication/customer/UserDashboard'
 import AdminDashboard from './components/authentication/admin/AdminDashboard'
+import CartPageFull from './components/CartPageFull'
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isToastVisible, setIsToastVisible] = useState(true)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const [currentPath, setCurrentPath] = useState(window.location.pathname)
 
-  // Simple routing logic
-  const currentPath = window.location.pathname
-  console.log('Current path:', currentPath) // Debug log
+  // Simple path detection - no complex event listeners needed
+  useEffect(() => {
+    const currentPath = window.location.pathname
+    console.log('🔄 App: Initial path on mount:', currentPath)
+    setCurrentPath(currentPath)
+  }, [])
+
+  console.log('🔄 App: Current path:', currentPath)
+  console.log('🔄 App: Checking if path === /cart:', currentPath === '/cart')
+
+  // If on cart page, show cart
+  if(currentPath === '/cart') {
+    console.log('✅ App: Rendering CartPageFull')
+    alert('App.jsx detected /cart path - should show cart page')
+    return (
+      <AuthProvider>
+        <CategoriesProvider>
+          <CartPageFull />
+        </CategoriesProvider>
+      </AuthProvider>
+    )
+  } else {
+    console.log('❌ App: Not cart page, current path:', currentPath)
+  }
 
   // If on dashboard page, show dashboard
-  if (currentPath === '/dashboard' || currentPath.startsWith('/dashboard/')) {
+  if(currentPath === '/dashboard' || currentPath.startsWith('/dashboard/')) {
     console.log('Rendering UserDashboard') // Debug log
     return (
       <AuthProvider>
@@ -39,7 +62,7 @@ function App() {
   }
 
   // If on admin dashboard page, show admin dashboard
-  if (currentPath === '/admin-dashboard' || currentPath.startsWith('/admin-dashboard/')) {
+  if(currentPath === '/admin-dashboard' || currentPath.startsWith('/admin-dashboard/')) {
     console.log('Rendering AdminDashboard') // Debug log
     return (
       <AuthProvider>
@@ -55,7 +78,7 @@ function App() {
   }
 
   // If on profile page, show only profile
-  if (currentPath === '/profile') {
+  if(currentPath === '/profile') {
     return (
       <AuthProvider>
         <CategoriesProvider>
@@ -81,15 +104,15 @@ function App() {
           <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
 
           {/* Notification Toast */}
-          <NotificationToast 
-            isVisible={isToastVisible} 
-            onClose={() => setIsToastVisible(false)} 
+          <NotificationToast
+            isVisible={isToastVisible}
+            onClose={() => setIsToastVisible(false)}
           />
 
           {/* Auth Modal */}
-          <LoginModal 
-            isOpen={isAuthModalOpen} 
-            onClose={() => setIsAuthModalOpen(false)} 
+          <LoginModal
+            isOpen={isAuthModalOpen}
+            onClose={() => setIsAuthModalOpen(false)}
           />
 
           {/* Header */}
