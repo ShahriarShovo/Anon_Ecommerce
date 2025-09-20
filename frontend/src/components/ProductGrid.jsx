@@ -1,11 +1,17 @@
 import React, {useState, useEffect} from 'react'
 import apiService from '../services/api'
+import SuccessNotification from './SuccessNotification'
+import ErrorNotification from './ErrorNotification'
 
 const ProductGrid = () => {
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [addingToCart, setAddingToCart] = useState({}) // Track which product is being added
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
+  const [showErrorNotification, setShowErrorNotification] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
 
   useEffect(() => {
     fetchProducts()
@@ -47,7 +53,8 @@ const ProductGrid = () => {
         console.log('🛒 ProductGrid: Updated sessionStorage cart count to:', currentCount + 1)
 
         // Show success message
-        alert(`${productTitle} added to cart successfully!`)
+        setSuccessMessage(`${productTitle} added to cart successfully!`)
+        setShowSuccessNotification(true)
 
         // Dispatch cart update event to update header counter
         console.log('🛒 ProductGrid: Dispatching cartUpdated event...')
@@ -67,7 +74,8 @@ const ProductGrid = () => {
       }
     } catch(error) {
       console.error('🛒 ProductGrid: Error adding to cart:', error)
-      alert(`Failed to add ${productTitle} to cart: ${error.message}`)
+      setErrorMessage(`Failed to add ${productTitle} to cart: ${error.message}`)
+      setShowErrorNotification(true)
     } finally {
       setAddingToCart(prev => ({...prev, [productId]: false}))
     }
@@ -337,6 +345,20 @@ const ProductGrid = () => {
           </div>
         </div>
       ))}
+
+      {/* Success Notification */}
+      <SuccessNotification
+        message={successMessage}
+        isVisible={showSuccessNotification}
+        onClose={() => setShowSuccessNotification(false)}
+      />
+
+      {/* Error Notification */}
+      <ErrorNotification
+        message={errorMessage}
+        isVisible={showErrorNotification}
+        onClose={() => setShowErrorNotification(false)}
+      />
     </div>
   )
 }

@@ -293,14 +293,18 @@ const CartPageFull = () => {
 
             if(response.success) {
                 // Order placed successfully
+                console.log('🧾 CartPageFull: Order placed successfully:', response.order)
                 setOrderData(response.order)
+                console.log('🧾 CartPageFull: Setting showInvoice to true')
                 setShowInvoice(true)
                 // Clear cart
                 setCart(null)
-                sessionStorage.removeItem('cartCount')
+                sessionStorage.setItem('cartCount', '0') // Set to 0 instead of removing
+                console.log('🧾 CartPageFull: Order complete, set sessionStorage to 0')
                 // Dispatch cart updated event
                 window.dispatchEvent(new CustomEvent('cartUpdated'))
             } else {
+                console.error('🧾 CartPageFull: Order placement failed:', response.message)
                 setError(response.message || "Failed to place order")
             }
         } catch(err) {
@@ -556,7 +560,11 @@ const CartPageFull = () => {
                                         fontWeight: '600',
                                         cursor: 'pointer',
                                         boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)',
-                                        transition: 'all 0.3s ease'
+                                        transition: 'all 0.3s ease',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        margin: '0 auto'
                                     }}
                                 >
                                     🛍️ Start Shopping →
@@ -596,20 +604,34 @@ const CartPageFull = () => {
                                                 </div>
                                                 <div>
                                                     <div className="order-price">{formatPrice(item.unit_price)}</div>
-                                                    <div className="qty-control">
-                                                        <button
+                                                    <div className="qty-wrapper">
+                                                        <span
+                                                            className="qty-minus"
                                                             onClick={() => {
-                                                                handleDecreaseQuantity(item.id);
+                                                                if(!updatingItems[item.id] && item.quantity > 1) {
+                                                                    handleDecreaseQuantity(item.id);
+                                                                }
                                                             }}
-                                                            disabled={updatingItems[item.id] || item.quantity <= 1}
-                                                        >-</button>
-                                                        <span>{updatingItems[item.id] ? '...' : item.quantity}</span>
-                                                        <button
+                                                            style={{
+                                                                cursor: updatingItems[item.id] || item.quantity <= 1 ? 'not-allowed' : 'pointer',
+                                                                opacity: updatingItems[item.id] || item.quantity <= 1 ? 0.5 : 1
+                                                            }}
+                                                        >-</span>
+                                                        <span className="qty-num">
+                                                            {updatingItems[item.id] ? '...' : (item.quantity < 10 ? '0' + item.quantity : item.quantity)}
+                                                        </span>
+                                                        <span
+                                                            className="qty-plus"
                                                             onClick={() => {
-                                                                handleIncreaseQuantity(item.id);
+                                                                if(!updatingItems[item.id] && item.can_increase) {
+                                                                    handleIncreaseQuantity(item.id);
+                                                                }
                                                             }}
-                                                            disabled={updatingItems[item.id] || !item.can_increase}
-                                                        >+</button>
+                                                            style={{
+                                                                cursor: updatingItems[item.id] || !item.can_increase ? 'not-allowed' : 'pointer',
+                                                                opacity: updatingItems[item.id] || !item.can_increase ? 0.5 : 1
+                                                            }}
+                                                        >+</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -994,8 +1016,13 @@ const CartPageFull = () => {
             {/* Invoice Modal */}
             {showInvoice && orderData && (
                 <InvoiceModal
-                    order={orderData}
-                    onClose={() => setShowInvoice(false)}
+                    isOpen={showInvoice}
+                    orderData={orderData}
+                    onClose={() => {
+                        setShowInvoice(false)
+                        // Redirect to home page after closing invoice
+                        window.location.href = '/'
+                    }}
                 />
             )}
 
@@ -1112,19 +1139,51 @@ const CartPageFull = () => {
           margin-bottom: 10px;
         }
 
-        .qty-control {
+        .qty-wrapper {
+          height: 50px;
+          min-width: 120px;
           display: flex;
           align-items: center;
-          gap: 10px;
+          justify-content: center;
+          background: #f9fafb;
+          border-radius: 12px;
+          box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+          margin: 0 auto;
         }
 
-        .qty-control button {
-          width: 30px;
-          height: 30px;
-          border: 1px solid #d1d5db;
-          background: white;
-          border-radius: 4px;
+        .qty-wrapper span {
+          width: 100%;
+          text-align: center;
+          font-size: 24px;
+          font-weight: 600;
           cursor: pointer;
+          user-select: none;
+          transition: all 0.3s ease;
+        }
+
+        .qty-wrapper span.qty-num {
+          font-size: 20px;
+          border-right: 2px solid rgba(0,0,0,0.2);
+          border-left: 2px solid rgba(0,0,0,0.2);
+          pointer-events: none;
+          color: #333;
+        }
+
+        .qty-wrapper span.qty-minus,
+        .qty-wrapper span.qty-plus {
+          color: #667eea;
+          font-size: 28px;
+        }
+
+        .qty-wrapper span.qty-minus:hover,
+        .qty-wrapper span.qty-plus:hover {
+          color: #5a6fd8;
+          transform: scale(1.1);
+        }
+
+        .qty-wrapper span.qty-minus:active,
+        .qty-wrapper span.qty-plus:active {
+          transform: scale(0.95);
         }
 
         .cart-summary {
@@ -1474,11 +1533,19 @@ const CartPageFull = () => {
         .empty-cart {
           text-align: center;
           padding: 60px 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 60vh;
         }
 
         .empty-cart-content {
           max-width: 400px;
           margin: 0 auto;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
         }
 
         .empty-cart-icon {

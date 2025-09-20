@@ -135,10 +135,11 @@ def create_order(request):
             
             # Clear cart after successful order
             cart_items.delete()
-            cart.subtotal = 0.00
-            cart.total_items = 0
-            cart.save()
-            print(f"🛒 Cart cleared: ID {cart.id}")
+            
+            # Delete the cart model completely after successful order
+            cart_id = cart.id
+            cart.delete()
+            print(f"🛒 Cart deleted completely: ID {cart_id}")
             
             # Return order details
             order_serializer = OrderSerializer(order, context={'request': request})

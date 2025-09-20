@@ -97,8 +97,10 @@ def add_to_cart(request):
     """
     try:
         # Validate request data
+        print(f"🛒 Backend: Add to cart request data: {request.data}")
         serializer = AddToCartSerializer(data=request.data)
         if not serializer.is_valid():
+            print(f"🛒 Backend: Validation failed: {serializer.errors}")
             return Response({
                 'success': False,
                 'error': 'Invalid data',

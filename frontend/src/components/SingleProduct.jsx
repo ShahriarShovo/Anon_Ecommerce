@@ -1,5 +1,7 @@
 import React, {useState, useEffect} from 'react'
 import apiService from '../services/api'
+import SuccessNotification from './SuccessNotification'
+import ErrorNotification from './ErrorNotification'
 import {useAuth} from '../contexts/AuthContext'
 import {LoginModal} from './authentication'
 
@@ -21,6 +23,10 @@ const SingleProduct = () => {
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [addingToCart, setAddingToCart] = useState(false)
   const [quantity, setQuantity] = useState(1)
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
+  const [showErrorNotification, setShowErrorNotification] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
   const [reviewForm, setReviewForm] = useState({
     rating: 5,
     title: '',
@@ -103,16 +109,28 @@ const SingleProduct = () => {
   }
 
   const handleQuantityIncrease = () => {
-    setQuantity(prev => prev + 1)
+    setQuantity(prev => {
+      const maxQuantity = selectedVariant?.quantity || product?.quantity || 100
+      const newQuantity = Math.min(prev + 1, maxQuantity)
+      console.log('🛒 SingleProduct: Quantity increased to:', newQuantity, '(max:', maxQuantity, ')')
+      return newQuantity
+    })
   }
 
   const handleQuantityDecrease = () => {
-    setQuantity(prev => Math.max(1, prev - 1))
+    setQuantity(prev => {
+      const newQuantity = Math.max(1, prev - 1)
+      console.log('🛒 SingleProduct: Quantity decreased to:', newQuantity)
+      return newQuantity
+    })
   }
 
   const handleQuantityChange = (e) => {
     const value = parseInt(e.target.value) || 1
-    setQuantity(Math.max(1, value))
+    const maxQuantity = selectedVariant?.quantity || product?.quantity || 100
+    const newQuantity = Math.max(1, Math.min(value, maxQuantity))
+    console.log('🛒 SingleProduct: Quantity changed to:', newQuantity, '(max:', maxQuantity, ')')
+    setQuantity(newQuantity)
   }
 
   const handleReviewSubmit = async (e) => {
@@ -152,11 +170,21 @@ const SingleProduct = () => {
     try {
       setAddingToCart(true)
 
+      // Debug: Log the data being sent
+      console.log('🛒 SingleProduct: Adding to cart with data:', {
+        product_id: product.id,
+        quantity: quantity,
+        variant_id: selectedVariant ? selectedVariant.id : null,
+        product_title: product.title
+      })
+
       const response = await apiService.addToCart(
         product.id,
         quantity,
         selectedVariant ? selectedVariant.id : null
       )
+
+      console.log('🛒 SingleProduct: Add to cart API response:', response)
 
       if(response.success) {
         // Update sessionStorage
@@ -164,7 +192,8 @@ const SingleProduct = () => {
         sessionStorage.setItem('cartCount', (currentCount + quantity).toString())
         console.log('🛒 SingleProduct: Updated sessionStorage cart count to:', currentCount + quantity)
 
-        alert(`${product.title} added to cart successfully!`)
+        setSuccessMessage(`${product.title} added to cart successfully!`)
+        setShowSuccessNotification(true)
 
         // Dispatch cart update event to update header counter
         window.dispatchEvent(new CustomEvent('cartUpdated'))
@@ -183,7 +212,45 @@ const SingleProduct = () => {
       }
     } catch(error) {
       console.error('Error adding to cart:', error)
-      alert(`Failed to add ${product.title} to cart: ${error.message}`)
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response,
+        data: error.response?.data,
+        status: error.response?.status
+      })
+
+      // Log the full error response for debugging
+      if(error.response?.data) {
+        console.log('Full error response data:', error.response.data)
+        if(error.response.data.details) {
+          console.log('Validation details:', error.response.data.details)
+        }
+      }
+
+      // Better error message handling
+      let errorMessage = 'Failed to add to cart'
+      if(error.response?.data?.details) {
+        // Handle validation errors
+        const details = error.response.data.details
+        if(details.quantity) {
+          errorMessage = details.quantity[0] // Get first quantity error
+        } else if(details.product_id) {
+          errorMessage = details.product_id[0] // Get first product error
+        } else if(details.variant_id) {
+          errorMessage = details.variant_id[0] // Get first variant error
+        } else {
+          errorMessage = JSON.stringify(details)
+        }
+      } else if(error.response?.data?.error) {
+        errorMessage = error.response.data.error
+      } else if(error.response?.data?.message) {
+        errorMessage = error.response.data.message
+      } else if(error.message) {
+        errorMessage = error.message
+      }
+
+      setErrorMessage(`Failed to add ${product.title} to cart: ${errorMessage}`)
+      setShowErrorNotification(true)
     } finally {
       setAddingToCart(false)
     }
@@ -377,16 +444,19 @@ const SingleProduct = () => {
                   −
                 </button>
                 <input
-                  type="text"
+                  type="number"
                   name="qty"
                   value={quantity}
                   className="input-qty"
+                  min="1"
+                  max={selectedVariant?.quantity || product?.quantity || 100}
                   onChange={handleQuantityChange}
                 />
                 <button
                   className="qty-btn-plus btn-light"
                   type="button"
                   onClick={handleQuantityIncrease}
+                  disabled={quantity >= (selectedVariant?.quantity || product?.quantity || 100)}
                 >
                   +
                 </button>
@@ -559,6 +629,20 @@ const SingleProduct = () => {
           </div>
         </div>
       </div>
+
+      {/* Success Notification */}
+      <SuccessNotification
+        message={successMessage}
+        isVisible={showSuccessNotification}
+        onClose={() => setShowSuccessNotification(false)}
+      />
+
+      {/* Error Notification */}
+      <ErrorNotification
+        message={errorMessage}
+        isVisible={showErrorNotification}
+        onClose={() => setShowErrorNotification(false)}
+      />
     </div>
   )
 }

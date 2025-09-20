@@ -53,7 +53,28 @@ class ApiService {
       console.log('🌐 API: Response cookies:', response.headers.get('Set-Cookie'));
 
       if(!response.ok) {
-        throw new Error(data.message || data || `HTTP error! status: ${response.status}`);
+        // Better error handling
+        let errorMessage = `HTTP error! status: ${response.status}`;
+
+        if(data) {
+          if(typeof data === 'string') {
+            errorMessage = data;
+          } else if(data.message) {
+            errorMessage = data.message;
+          } else if(data.error) {
+            errorMessage = data.error;
+          } else if(data.details) {
+            errorMessage = JSON.stringify(data.details);
+          } else {
+            errorMessage = JSON.stringify(data);
+          }
+        }
+
+        const error = new Error(errorMessage);
+        error.response = response;
+        error.data = data;
+        error.status = response.status;
+        throw error;
       }
 
       return data;

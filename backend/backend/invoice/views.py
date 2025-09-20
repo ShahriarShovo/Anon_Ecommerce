@@ -131,18 +131,18 @@ def download_invoice_pdf(request, invoice_id):
         # Create BytesIO buffer for PDF
         buffer = BytesIO()
         
-        # Create PDF document
-        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+        # Create PDF document with smaller margins for single page
+        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
         
         # Get styles
         styles = getSampleStyleSheet()
         
-        # Custom styles
+        # Custom styles - optimized for single page
         title_style = ParagraphStyle(
             'CustomTitle',
             parent=styles['Heading1'],
-            fontSize=24,
-            spaceAfter=30,
+            fontSize=18,
+            spaceAfter=15,
             alignment=TA_CENTER,
             textColor=colors.HexColor('#28a745')
         )
@@ -150,16 +150,16 @@ def download_invoice_pdf(request, invoice_id):
         header_style = ParagraphStyle(
             'Header',
             parent=styles['Heading2'],
-            fontSize=16,
-            spaceAfter=12,
+            fontSize=12,
+            spaceAfter=8,
             textColor=colors.HexColor('#28a745')
         )
         
         normal_style = ParagraphStyle(
             'Normal',
             parent=styles['Normal'],
-            fontSize=10,
-            spaceAfter=6
+            fontSize=9,
+            spaceAfter=4
         )
         
         # Build PDF content
@@ -167,20 +167,20 @@ def download_invoice_pdf(request, invoice_id):
         
         # Title
         story.append(Paragraph("🛍️ INVOICE", title_style))
-        story.append(Spacer(1, 20))
+        story.append(Spacer(1, 10))
         
         # Invoice details
         story.append(Paragraph(f"<b>Invoice Number:</b> {invoice.invoice_number}", normal_style))
         story.append(Paragraph(f"<b>Invoice Date:</b> {invoice.get_invoice_date_display()}", normal_style))
         story.append(Paragraph(f"<b>Due Date:</b> {invoice.get_due_date_display()}", normal_style))
-        story.append(Spacer(1, 20))
+        story.append(Spacer(1, 10))
         
         # Company info
         story.append(Paragraph("🛍️ " + (invoice.company_name or "Anon Ecommerce"), header_style))
         story.append(Paragraph(f"<b>Email:</b> {invoice.company_email or 'info@anonecommerce.com'}", normal_style))
         story.append(Paragraph(f"<b>Phone:</b> {invoice.company_phone or '+880 1234 567890'}", normal_style))
         story.append(Paragraph(f"<b>Address:</b> {invoice.company_address or 'Dhaka, Bangladesh'}", normal_style))
-        story.append(Spacer(1, 20))
+        story.append(Spacer(1, 10))
         
         # Customer info
         story.append(Paragraph("Bill To:", header_style))
@@ -189,7 +189,7 @@ def download_invoice_pdf(request, invoice_id):
         story.append(Paragraph(f"<b>Address:</b> {invoice.order.delivery_address.address_line_1}", normal_style))
         story.append(Paragraph(f"<b>City:</b> {invoice.order.delivery_address.city}", normal_style))
         story.append(Paragraph(f"<b>Country:</b> {invoice.order.delivery_address.country}", normal_style))
-        story.append(Spacer(1, 20))
+        story.append(Spacer(1, 10))
         
         # Order items table
         story.append(Paragraph("Order Items:", header_style))
@@ -206,21 +206,24 @@ def download_invoice_pdf(request, invoice_id):
                 f"৳{item.total_price:,.2f}"
             ])
         
-        # Create table
-        table = Table(table_data, colWidths=[2*inch, 1*inch, 0.8*inch, 1*inch, 1*inch])
+        # Create table with optimized sizing
+        table = Table(table_data, colWidths=[2.2*inch, 0.8*inch, 0.6*inch, 0.8*inch, 0.8*inch])
         table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#28a745')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('FONTSIZE', (0, 0), (-1, 0), 8),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 1), (-1, -1), 4),
             ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.black)
         ]))
         
         story.append(table)
-        story.append(Spacer(1, 20))
+        story.append(Spacer(1, 10))
         
         # Totals
         story.append(Paragraph("Order Summary:", header_style))
@@ -228,7 +231,7 @@ def download_invoice_pdf(request, invoice_id):
         story.append(Paragraph(f"<b>Shipping Cost:</b> ৳{invoice.get_shipping_cost():,.2f}", normal_style))
         story.append(Paragraph(f"<b>Tax Amount:</b> ৳{invoice.get_tax_amount():,.2f}", normal_style))
         story.append(Paragraph(f"<b>Total Amount:</b> ৳{invoice.order.total_amount:,.2f}", normal_style))
-        story.append(Spacer(1, 20))
+        story.append(Spacer(1, 10))
         
         # Payment info
         if invoice.order.payment:
@@ -240,7 +243,7 @@ def download_invoice_pdf(request, invoice_id):
         
         # Notes
         if invoice.order.notes:
-            story.append(Spacer(1, 20))
+            story.append(Spacer(1, 10))
             story.append(Paragraph("Notes:", header_style))
             story.append(Paragraph(invoice.order.notes, normal_style))
         

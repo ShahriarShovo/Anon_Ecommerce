@@ -16,10 +16,10 @@ const Header = ({onAuthClick}) => {
   // Fetch cart count
   const fetchCartCount = async () => {
     try {
-      // Check if cart was cleared (sessionStorage count is 0)
+      // Check if cart was cleared or order completed (sessionStorage count is 0)
       const storedCount = sessionStorage.getItem('cartCount')
       if(storedCount && parseInt(storedCount) === 0) {
-        console.log('🛒 Header: Cart was cleared, skipping API call to prevent new cart creation')
+        console.log('🛒 Header: Cart was cleared or order completed, skipping API call to prevent new cart creation')
         setCartCount(0)
         return
       }
@@ -33,11 +33,11 @@ const Header = ({onAuthClick}) => {
 
         // Always calculate count from items as primary method
         const items = response.cart.items || []
-        const calculatedCount = items.reduce((sum, item) => sum + (item.quantity || 0), 0)
+        const calculatedCount = items.length  // Count unique items, not total quantity
         const apiCount = response.cart.total_items || 0
 
         console.log('🛒 Header: API total_items:', apiCount)
-        console.log('🛒 Header: Calculated from items:', calculatedCount)
+        console.log('🛒 Header: Calculated unique items count:', calculatedCount)
         console.log('🛒 Header: Cart ID:', response.cart.id)
         console.log('🛒 Header: Cart items:', items.length)
         console.log('🛒 Header: Cart subtotal:', response.cart.subtotal)
@@ -48,7 +48,7 @@ const Header = ({onAuthClick}) => {
 
         // Debug: Check if we're using calculated or API count
         if(calculatedCount > 0 && apiCount === 0) {
-          console.log('🛒 Header: Using calculated count because API total_items is 0')
+          console.log('🛒 Header: Using calculated unique items count because API total_items is 0')
         } else if(apiCount > 0) {
           console.log('🛒 Header: Using API count')
         } else {
@@ -100,7 +100,7 @@ const Header = ({onAuthClick}) => {
 
         // Debug: Check if we're using calculated or API count
         if(calculatedCount > 0 && apiCount === 0) {
-          console.log('🛒 Header: Using calculated count because API total_items is 0')
+          console.log('🛒 Header: Using calculated unique items count because API total_items is 0')
         } else if(apiCount > 0) {
           console.log('🛒 Header: Using API count')
         } else {
@@ -170,10 +170,10 @@ const Header = ({onAuthClick}) => {
     const handleCartUpdate = () => {
       console.log('🛒 Header: cartUpdated event received!')
 
-      // Check if cart was cleared (sessionStorage count is 0)
+      // Check if cart was cleared or order completed (sessionStorage count is 0)
       const storedCount = sessionStorage.getItem('cartCount')
       if(storedCount && parseInt(storedCount) === 0) {
-        console.log('🛒 Header: Cart was cleared, skipping API call to prevent new cart creation')
+        console.log('🛒 Header: Cart was cleared or order completed, skipping API call to prevent new cart creation')
         setCartCount(0)
         return
       }

@@ -1,34 +1,41 @@
-import React, { useState, useEffect } from "react"
+import React, {useState, useEffect} from "react"
 import apiService from "../services/api"
 
-const InvoiceModal = ({ isOpen, onClose, orderData }) => {
+const InvoiceModal = ({isOpen, onClose, orderData}) => {
   const [invoice, setInvoice] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    if (isOpen && orderData) {
+    if(isOpen && orderData) {
       generateInvoice()
     }
   }, [isOpen, orderData])
 
   const generateInvoice = async () => {
-    if (!orderData?.id) return
+    if(!orderData?.id) {
+      console.log('🧾 InvoiceModal: No orderData.id provided')
+      return
+    }
 
+    console.log('🧾 InvoiceModal: Generating invoice for order:', orderData.id)
     setLoading(true)
     setError(null)
 
     try {
       const response = await apiService.generateInvoice(orderData.id)
-      
-      if (response.success) {
+      console.log('🧾 InvoiceModal: Invoice API response:', response)
+
+      if(response.success) {
+        console.log('🧾 InvoiceModal: Invoice generated successfully:', response.invoice)
         setInvoice(response.invoice)
       } else {
+        console.error('🧾 InvoiceModal: Invoice generation failed:', response.message)
         setError(response.message || "Failed to generate invoice")
       }
-    } catch (err) {
+    } catch(err) {
+      console.error("🧾 InvoiceModal: Invoice generation error:", err)
       setError("Failed to generate invoice. Please try again.")
-      console.error("Invoice generation error:", err)
     } finally {
       setLoading(false)
     }
@@ -56,7 +63,7 @@ const InvoiceModal = ({ isOpen, onClose, orderData }) => {
         }
       })
 
-      if (response.ok) {
+      if(response.ok) {
         const blob = await response.blob()
         const url = window.URL.createObjectURL(blob)
         const a = document.createElement('a')
@@ -71,13 +78,50 @@ const InvoiceModal = ({ isOpen, onClose, orderData }) => {
         console.error('Failed to download PDF')
         alert('Failed to download PDF. Please try again.')
       }
-    } catch (error) {
+    } catch(error) {
       console.error('Download error:', error)
       alert('Failed to download PDF. Please try again.')
     }
   }
 
-  if (!isOpen) return null
+  const printInvoicePDF = async (invoiceId) => {
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/invoice/${invoiceId}/download/`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+        }
+      })
+
+      if(response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+
+        // Create a new window for printing
+        const printWindow = window.open(url, '_blank')
+        if(printWindow) {
+          printWindow.onload = () => {
+            printWindow.print()
+            printWindow.close()
+          }
+        }
+
+        // Clean up after a delay
+        setTimeout(() => {
+          window.URL.revokeObjectURL(url)
+        }, 1000)
+      } else {
+        console.error('Failed to load PDF for printing')
+        alert('Failed to load PDF for printing. Please try again.')
+      }
+    } catch(error) {
+      console.error('Print error:', error)
+      alert('Failed to print PDF. Please try again.')
+    }
+  }
+
+  if(!isOpen) return null
 
   return (
     <>
@@ -252,11 +296,11 @@ const InvoiceModal = ({ isOpen, onClose, orderData }) => {
       <div className={`invoice-overlay ${isOpen ? 'active' : ''}`} onClick={onClose}>
         <div className="invoice-modal" onClick={(e) => e.stopPropagation()}>
           <div className="invoice-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ 
-                width: '40px', 
-                height: '40px', 
-                background: 'rgba(255, 255, 255, 0.2)', 
+            <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                background: 'rgba(255, 255, 255, 0.2)',
                 borderRadius: '8px',
                 display: 'flex',
                 alignItems: 'center',
@@ -265,7 +309,7 @@ const InvoiceModal = ({ isOpen, onClose, orderData }) => {
               }}>
                 🛍️
               </div>
-              <h2 style={{ margin: 0 }}>Invoice</h2>
+              <h2 style={{margin: 0}}>Invoice</h2>
             </div>
             <button className="invoice-close-btn" onClick={onClose}>
               ✕
@@ -278,19 +322,19 @@ const InvoiceModal = ({ isOpen, onClose, orderData }) => {
                 <div className="spinner"></div>
               </div>
             ) : error ? (
-              <div style={{ color: '#dc3545', textAlign: 'center', padding: '20px' }}>
+              <div style={{color: '#dc3545', textAlign: 'center', padding: '20px'}}>
                 {error}
               </div>
             ) : invoice ? (
               <>
                 {/* Company Info */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '30px' }}>
+                <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '30px'}}>
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                      <div style={{ 
-                        width: '32px', 
-                        height: '32px', 
-                        background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)', 
+                    <div style={{display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px'}}>
+                      <div style={{
+                        width: '32px',
+                        height: '32px',
+                        background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
                         borderRadius: '6px',
                         display: 'flex',
                         alignItems: 'center',
@@ -300,13 +344,13 @@ const InvoiceModal = ({ isOpen, onClose, orderData }) => {
                       }}>
                         🛍️
                       </div>
-                      <h3 style={{ margin: 0 }}>{invoice.company_name || 'Company Name'}</h3>
+                      <h3 style={{margin: 0}}>{invoice.company_name || 'Company Name'}</h3>
                     </div>
                     <p>{invoice.company_address || 'Company Address'}</p>
                     <p>Phone: {invoice.company_phone || 'N/A'}</p>
                     <p>Email: {invoice.company_email || 'N/A'}</p>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
+                  <div style={{textAlign: 'right'}}>
                     <h4>Invoice #{invoice.invoice_number || 'N/A'}</h4>
                     <p>Order ID: {invoice.order?.order_number || 'N/A'}</p>
                     <p>Date: {invoice.invoice_date ? formatDate(invoice.invoice_date) : 'N/A'}</p>
@@ -316,9 +360,9 @@ const InvoiceModal = ({ isOpen, onClose, orderData }) => {
 
                 {/* Bill To */}
                 {invoice.order.delivery_address && (
-                  <div style={{ marginBottom: '30px' }}>
+                  <div style={{marginBottom: '30px'}}>
                     <h4>Bill To</h4>
-                    <address style={{ fontStyle: 'normal' }}>
+                    <address style={{fontStyle: 'normal'}}>
                       <strong>{invoice.order.delivery_address.full_name}</strong><br />
                       {invoice.order.delivery_address.address_line_1}<br />
                       {invoice.order.delivery_address.city}, {invoice.order.delivery_address.country}<br />
@@ -344,7 +388,7 @@ const InvoiceModal = ({ isOpen, onClose, orderData }) => {
                         <td>
                           {item.product_name || 'N/A'}
                           {item.variant_title && <br />}
-                          {item.variant_title && <small style={{ color: '#6c757d' }}>{item.variant_title}</small>}
+                          {item.variant_title && <small style={{color: '#6c757d'}}>{item.variant_title}</small>}
                         </td>
                         <td className="text-end">{formatPrice(item.unit_price || 0)}</td>
                         <td className="text-end">{formatPrice(item.total_price || 0)}</td>
@@ -375,11 +419,11 @@ const InvoiceModal = ({ isOpen, onClose, orderData }) => {
 
                 {/* Payment Info */}
                 {invoice.order.payment && (
-                  <div style={{ 
-                    backgroundColor: '#e3f2fd', 
-                    padding: '15px', 
-                    borderRadius: '8px', 
-                    marginTop: '20px' 
+                  <div style={{
+                    backgroundColor: '#e3f2fd',
+                    padding: '15px',
+                    borderRadius: '8px',
+                    marginTop: '20px'
                   }}>
                     <h5>Payment Information</h5>
                     <p><strong>Payment Method:</strong> {invoice.order.payment.payment_method?.name || 'N/A'}</p>
@@ -391,17 +435,17 @@ const InvoiceModal = ({ isOpen, onClose, orderData }) => {
                 )}
 
                 {/* Actions */}
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'center', 
-                  gap: '15px', 
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  gap: '15px',
                   marginTop: '30px',
                   padding: '20px',
                   backgroundColor: '#f8f9fa',
                   borderRadius: '8px',
                   border: '1px solid #dee2e6'
                 }}>
-                  <button className="btn-print" onClick={() => window.print()}>
+                  <button className="btn-print" onClick={() => printInvoicePDF(invoice.id)}>
                     🖨️ Print Invoice
                   </button>
                   <button className="btn-download" onClick={() => downloadInvoicePDF(invoice.id)}>
