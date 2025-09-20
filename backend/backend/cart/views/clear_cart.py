@@ -34,7 +34,8 @@ def get_or_create_cart(request):
     Returns:
         Cart: User's or session's cart
     """
-    if request.user.is_authenticated:
+    # Check if user is authenticated and not anonymous
+    if request.user.is_authenticated and hasattr(request.user, 'email'):
         # Authenticated user - get or create user cart
         cart, created = Cart.objects.get_or_create(
             user=request.user,
@@ -48,20 +49,11 @@ def get_or_create_cart(request):
             request.session.create()
             session_key = request.session.session_key
         
-        # Debug: Log session key
-        print(f"🛒 Backend: Clear Cart - Session key: {session_key}")
-        
         cart, created = Cart.objects.get_or_create(
             session_key=session_key,
             is_active=True,
             defaults={'is_active': True}
         )
-        
-        # Debug: Log cart creation
-        if created:
-            print(f"🛒 Backend: Clear Cart - Created new cart with session key: {session_key}")
-        else:
-            print(f"🛒 Backend: Clear Cart - Found existing cart with session key: {session_key}")
     
     return cart
 
@@ -86,40 +78,44 @@ def clear_cart(request):
     }
     """
     try:
-        print(f"🛒 Backend: Clear Cart - Starting clear operation")
-        
         # Get cart
         cart = get_or_create_cart(request)
-        print(f"🛒 Backend: Clear Cart - Cart ID: {cart.id}, Session Key: {cart.session_key}, User: {cart.user}")
         
         # Count items before clearing
         items_count = cart.items.count()
-        print(f"🛒 Backend: Clear Cart - Items to clear: {items_count}")
         
         with transaction.atomic():
             # Clear all items
             cart.items.all().delete()
-            print(f"🛒 Backend: Clear Cart - Deleted {items_count} items")
             
-            # Reset cart totals
-            cart.total_items = 0
-            cart.subtotal = 0.00
-            cart.save(update_fields=['total_items', 'subtotal', 'updated_at'])
-            print(f"🛒 Backend: Clear Cart - Reset cart totals")
+            # Check if cart should be deleted (for both guest and user carts)
+            cart_deleted = cart.cleanup_if_empty()
+            
+            if not cart_deleted:
+                # Reset cart totals (this should not happen with our new logic)
+                cart.total_items = 0
+                cart.subtotal = 0.00
+                cart.save(update_fields=['total_items', 'subtotal', 'updated_at'])
         
-        # Serialize response
-        cart_serializer = CartSerializer(cart)
-        
-        print(f"🛒 Backend: Clear Cart - Successfully cleared cart with {len(cart_serializer.data.get('items', []))} items")
-        
-        return Response({
-            'success': True,
-            'message': f'Cart cleared successfully. {items_count} items removed.',
-            'cart': cart_serializer.data
-        }, status=status.HTTP_200_OK)
+        # Handle response based on whether cart was deleted
+        if cart_deleted:
+            # Cart was deleted (both guest and user carts)
+            return Response({
+                'success': True,
+                'message': f'Cart cleared successfully. {items_count} items removed. Cart deleted.',
+                'cart': None
+            }, status=status.HTTP_200_OK)
+        else:
+            # Cart still exists (this should not happen with our new logic)
+            cart_serializer = CartSerializer(cart)
+            
+            return Response({
+                'success': True,
+                'message': f'Cart cleared successfully. {items_count} items removed.',
+                'cart': cart_serializer.data
+            }, status=status.HTTP_200_OK)
         
     except Exception as e:
-        print(f"🛒 Backend: Clear Cart - Error: {str(e)}")
         return Response({
             'success': False,
             'error': str(e)

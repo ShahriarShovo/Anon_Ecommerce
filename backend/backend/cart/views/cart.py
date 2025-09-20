@@ -46,7 +46,8 @@ def get_or_create_cart(request):
     Returns:
         Cart: User's or session's cart
     """
-    if request.user.is_authenticated:
+    # Check if user is authenticated and not anonymous
+    if request.user.is_authenticated and hasattr(request.user, 'email'):
         # Authenticated user - get or create user cart
         cart, created = Cart.objects.get_or_create(
             user=request.user,
@@ -60,20 +61,11 @@ def get_or_create_cart(request):
             request.session.create()
             session_key = request.session.session_key
         
-        # Debug: Log session key
-        print(f"🛒 Backend: Session key: {session_key}")
-        
         cart, created = Cart.objects.get_or_create(
             session_key=session_key,
             is_active=True,
             defaults={'is_active': True}
         )
-        
-        # Debug: Log cart creation
-        if created:
-            print(f"🛒 Backend: Created new cart with session key: {session_key}")
-        else:
-            print(f"🛒 Backend: Found existing cart with session key: {session_key}")
     
     return cart
 
@@ -238,20 +230,34 @@ def remove_cart_item(request, item_id):
             print(f"🛒 Backend: Deleting cart item: {cart_item.id}")
             cart_item.delete()
             
-            # Update cart totals
-            cart.calculate_totals()
-            print(f"🛒 Backend: Cart totals updated - Total items: {cart.total_items}, Subtotal: {cart.subtotal}")
+            # Check if cart should be deleted (for guest users)
+            cart_deleted = cart.cleanup_if_empty()
+            
+            if not cart_deleted:
+                # Update cart totals (for authenticated users)
+                cart.calculate_totals()
+                print(f"🛒 Backend: Cart totals updated - Total items: {cart.total_items}, Subtotal: {cart.subtotal}")
+            else:
+                print(f"🛒 Backend: Cart deleted (empty guest cart)")
         
-        # Serialize response
-        cart_serializer = CartSerializer(cart)
-        
-        print(f"🛒 Backend: Remove successful - Returning cart with {len(cart_serializer.data.get('items', []))} items")
-        
-        return Response({
-            'success': True,
-            'message': 'Item removed successfully',
-            'cart': cart_serializer.data
-        }, status=status.HTTP_200_OK)
+        # Handle response based on whether cart was deleted
+        if cart_deleted:
+            # Cart was deleted (guest user)
+            return Response({
+                'success': True,
+                'message': 'Item removed successfully. Cart deleted.',
+                'cart': None
+            }, status=status.HTTP_200_OK)
+        else:
+            # Cart still exists (authenticated user)
+            cart_serializer = CartSerializer(cart)
+            print(f"🛒 Backend: Remove successful - Returning cart with {len(cart_serializer.data.get('items', []))} items")
+            
+            return Response({
+                'success': True,
+                'message': 'Item removed successfully',
+                'cart': cart_serializer.data
+            }, status=status.HTTP_200_OK)
     except Exception as e:
         print(f"🛒 Backend: Remove cart item error: {str(e)}")
         return Response({
@@ -365,31 +371,47 @@ def decrease_cart_item_quantity(request, item_id):
             # Decrease quantity (removes item if quantity becomes 0)
             item_removed = not cart_item.decrease_quantity(1)
             
-            # Update cart totals
-            cart.calculate_totals()
+            # Check if cart should be deleted (for guest users)
+            cart_deleted = cart.cleanup_if_empty()
+            
+            if not cart_deleted:
+                # Update cart totals (for authenticated users)
+                cart.calculate_totals()
+            else:
+                print(f"🛒 Backend: Cart deleted (empty guest cart)")
         
-        # Serialize response
-        cart_serializer = CartSerializer(cart)
-        
-        response_data = {
-            'success': True,
-            'message': 'Item removed from cart' if item_removed else 'Quantity decreased successfully',
-            'cart': cart_serializer.data
-        }
-        
-        if not item_removed:
-            response_data['cart_item'] = {
-                'id': cart_item.id,
-                'product_title': cart_item.product.title,
-                'variant_title': cart_item.variant.title if cart_item.variant else None,
-                'quantity': cart_item.quantity,
-                'unit_price': float(cart_item.unit_price),
-                'total_price': float(cart_item.get_total_price())
-            }
+        # Handle response based on whether cart was deleted
+        if cart_deleted:
+            # Cart was deleted (guest user)
+            return Response({
+                'success': True,
+                'message': 'Item removed from cart. Cart deleted.',
+                'cart': None,
+                'cart_item': None
+            }, status=status.HTTP_200_OK)
         else:
-            response_data['cart_item'] = None
-        
-        return Response(response_data, status=status.HTTP_200_OK)
+            # Cart still exists (authenticated user)
+            cart_serializer = CartSerializer(cart)
+            
+            response_data = {
+                'success': True,
+                'message': 'Item removed from cart' if item_removed else 'Quantity decreased successfully',
+                'cart': cart_serializer.data
+            }
+            
+            if not item_removed:
+                response_data['cart_item'] = {
+                    'id': cart_item.id,
+                    'product_title': cart_item.product.title,
+                    'variant_title': cart_item.variant.title if cart_item.variant else None,
+                    'quantity': cart_item.quantity,
+                    'unit_price': float(cart_item.unit_price),
+                    'total_price': float(cart_item.get_total_price())
+                }
+            else:
+                response_data['cart_item'] = None
+            
+            return Response(response_data, status=status.HTTP_200_OK)
         
     except Exception as e:
         return Response({

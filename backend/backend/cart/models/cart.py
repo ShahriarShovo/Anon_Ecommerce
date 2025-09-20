@@ -153,6 +153,25 @@ class Cart(models.Model):
             self.calculate_totals()
         
         return len(expired_items)
+    
+    def is_empty(self):
+        """Check if cart has no items"""
+        return self.items.count() == 0
+    
+    def cleanup_if_empty(self):
+        """Delete cart if it's empty (for both guest and authenticated users)"""
+        if self.is_empty():
+            if not self.user:
+                # Delete guest carts when empty
+                print(f"🛒 Backend: Deleting empty guest cart: {self.id}")
+                self.delete()
+                return True
+            else:
+                # Delete authenticated user carts when empty (to prevent database bloat)
+                print(f"🛒 Backend: Deleting empty user cart: {self.id} for user: {self.user.email}")
+                self.delete()
+                return True
+        return False
 
 
 class CartItem(models.Model):

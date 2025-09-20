@@ -33,7 +33,6 @@ function App() {
   // If on cart page, show cart
   if(currentPath === '/cart') {
     console.log('✅ App: Rendering CartPageFull')
-    alert('App.jsx detected /cart path - should show cart page')
     return (
       <AuthProvider>
         <CategoriesProvider>

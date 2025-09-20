@@ -125,6 +125,15 @@ const CartPageFull = () => {
     // Fetch cart and addresses
     useEffect(() => {
         const fetchCart = async () => {
+            // Check if cart was cleared (sessionStorage count is 0)
+            const storedCount = sessionStorage.getItem('cartCount')
+            if(storedCount && parseInt(storedCount) === 0) {
+                console.log('🛒 CartPageFull: Cart was cleared, skipping API call to prevent new cart creation')
+                setCart(null)
+                setLoading(false)
+                return
+            }
+
             setLoading(true)
             try {
                 const response = await apiService.getCart()
@@ -307,8 +316,16 @@ const CartPageFull = () => {
         try {
             const response = await apiService.clearCart()
             if(response.success) {
-                setCart(null)
-                sessionStorage.removeItem('cartCount')
+                if(response.cart === null) {
+                    // Cart was deleted (both guest and user carts)
+                    setCart(null)
+                    sessionStorage.setItem('cartCount', '0') // Set to 0 instead of removing
+                    console.log('🛒 CartPageFull: Cart cleared, set sessionStorage to 0')
+                } else {
+                    // Cart still exists (this should not happen with our new logic)
+                    setCart(response.cart)
+                    sessionStorage.setItem('cartCount', response.cart.total_items || 0)
+                }
                 window.dispatchEvent(new CustomEvent('cartUpdated'))
                 setShowClearConfirm(false)
             } else {
@@ -347,6 +364,104 @@ const CartPageFull = () => {
             }
         }
         return "/assets/images/products/1.jpg"
+    }
+
+    // Cart item management functions
+    const handleRemoveItem = async (itemId) => {
+        console.log('🛒 CartPage: Removing item with ID:', itemId);
+        setUpdatingItems(prev => ({...prev, [itemId]: true}));
+
+        try {
+            const response = await apiService.removeCartItem(itemId);
+            console.log('🛒 CartPage: Remove item response:', response);
+
+            if(response.success) {
+                if(response.cart === null) {
+                    // Cart was deleted (both guest and user carts)
+                    setCart(null);
+                    sessionStorage.setItem('cartCount', '0'); // Set to 0 instead of removing
+                    console.log('🛒 CartPageFull: Item removed, cart deleted, set sessionStorage to 0');
+                } else {
+                    // Cart still exists (authenticated user)
+                    setCart(response.cart);
+                    sessionStorage.setItem('cartCount', response.cart.total_items || 0);
+                }
+                // Dispatch cart updated event
+                window.dispatchEvent(new CustomEvent('cartUpdated'));
+            } else {
+                setError("Failed to remove item from cart");
+            }
+        } catch(error) {
+            console.error('❌ CartPage: Error removing item:', error);
+            setError("Failed to remove item from cart. Please try again.");
+        } finally {
+            setUpdatingItems(prev => ({...prev, [itemId]: false}));
+        }
+    }
+
+    const handleIncreaseQuantity = async (itemId) => {
+        console.log('🛒 CartPage: Increasing quantity for item ID:', itemId);
+        setUpdatingItems(prev => ({...prev, [itemId]: true}));
+
+        try {
+            const response = await apiService.increaseCartItemQuantity(itemId);
+            console.log('🛒 CartPage: Increase quantity response:', response);
+
+            if(response.success) {
+                // Check if cart was deleted
+                if(response.cart === null) {
+                    // Cart was deleted (both guest and user carts)
+                    setCart(null);
+                    sessionStorage.setItem('cartCount', '0'); // Set to 0 instead of removing
+                    console.log('🛒 CartPageFull: Quantity increased, cart deleted, set sessionStorage to 0');
+                } else {
+                    // Cart still exists, refresh cart data
+                    setCart(response.cart);
+                    sessionStorage.setItem('cartCount', response.cart.total_items || 0);
+                }
+                // Dispatch cart updated event
+                window.dispatchEvent(new CustomEvent('cartUpdated'));
+            } else {
+                setError("Failed to update quantity");
+            }
+        } catch(error) {
+            console.error('❌ CartPage: Error increasing quantity:', error);
+            setError("Failed to update quantity. Please try again.");
+        } finally {
+            setUpdatingItems(prev => ({...prev, [itemId]: false}));
+        }
+    }
+
+    const handleDecreaseQuantity = async (itemId) => {
+        console.log('🛒 CartPage: Decreasing quantity for item ID:', itemId);
+        setUpdatingItems(prev => ({...prev, [itemId]: true}));
+
+        try {
+            const response = await apiService.decreaseCartItemQuantity(itemId);
+            console.log('🛒 CartPage: Decrease quantity response:', response);
+
+            if(response.success) {
+                if(response.cart === null) {
+                    // Cart was deleted (both guest and user carts)
+                    setCart(null);
+                    sessionStorage.setItem('cartCount', '0'); // Set to 0 instead of removing
+                    console.log('🛒 CartPageFull: Quantity decreased, cart deleted, set sessionStorage to 0');
+                } else {
+                    // Cart still exists (authenticated user)
+                    setCart(response.cart);
+                    sessionStorage.setItem('cartCount', response.cart.total_items || 0);
+                }
+                // Dispatch cart updated event
+                window.dispatchEvent(new CustomEvent('cartUpdated'));
+            } else {
+                setError("Failed to update quantity");
+            }
+        } catch(error) {
+            console.error('❌ CartPage: Error decreasing quantity:', error);
+            setError("Failed to update quantity. Please try again.");
+        } finally {
+            setUpdatingItems(prev => ({...prev, [itemId]: false}));
+        }
     }
 
     return (
@@ -471,7 +586,7 @@ const CartPageFull = () => {
                                                             className="remove-btn"
                                                             onClick={() => {
                                                                 console.log('🛒 Frontend: Remove button clicked for item ID:', item.id);
-                                                                // handleRemoveItem(item.id);
+                                                                handleRemoveItem(item.id);
                                                             }}
                                                             disabled={updatingItems[item.id]}
                                                         >
@@ -484,14 +599,14 @@ const CartPageFull = () => {
                                                     <div className="qty-control">
                                                         <button
                                                             onClick={() => {
-                                                                // handleDecreaseQuantity(item.id);
+                                                                handleDecreaseQuantity(item.id);
                                                             }}
                                                             disabled={updatingItems[item.id] || item.quantity <= 1}
                                                         >-</button>
                                                         <span>{updatingItems[item.id] ? '...' : item.quantity}</span>
                                                         <button
                                                             onClick={() => {
-                                                                // handleIncreaseQuantity(item.id);
+                                                                handleIncreaseQuantity(item.id);
                                                             }}
                                                             disabled={updatingItems[item.id] || !item.can_increase}
                                                         >+</button>

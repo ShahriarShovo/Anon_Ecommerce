@@ -16,6 +16,14 @@ const Header = ({onAuthClick}) => {
   // Fetch cart count
   const fetchCartCount = async () => {
     try {
+      // Check if cart was cleared (sessionStorage count is 0)
+      const storedCount = sessionStorage.getItem('cartCount')
+      if(storedCount && parseInt(storedCount) === 0) {
+        console.log('🛒 Header: Cart was cleared, skipping API call to prevent new cart creation')
+        setCartCount(0)
+        return
+      }
+
       console.log('🛒 Header: Fetching cart count...')
       const response = await apiService.getCart()
       console.log('🛒 Header: Cart API response:', response)
@@ -161,6 +169,15 @@ const Header = ({onAuthClick}) => {
   useEffect(() => {
     const handleCartUpdate = () => {
       console.log('🛒 Header: cartUpdated event received!')
+
+      // Check if cart was cleared (sessionStorage count is 0)
+      const storedCount = sessionStorage.getItem('cartCount')
+      if(storedCount && parseInt(storedCount) === 0) {
+        console.log('🛒 Header: Cart was cleared, skipping API call to prevent new cart creation')
+        setCartCount(0)
+        return
+      }
+
       // Add small delay to ensure backend has processed the update
       setTimeout(() => {
         fetchCartCount()
