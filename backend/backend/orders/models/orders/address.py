@@ -73,6 +73,10 @@ class Address(models.Model):
         verbose_name = "Address"
         verbose_name_plural = "Addresses"
         ordering = ['-is_default', '-created_at']
+        # Prevent duplicate addresses for same user
+        unique_together = [
+            ['user', 'full_name', 'phone_number', 'address_line_1', 'city', 'country']
+        ]
     
     def __str__(self):
         return f"{self.full_name} - {self.city}, {self.country}"

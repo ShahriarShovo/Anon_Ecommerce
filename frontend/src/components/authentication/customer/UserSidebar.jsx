@@ -1,8 +1,8 @@
-import React, { memo } from 'react'
-import { useAuth } from '../../../contexts/AuthContext'
+import React, {memo} from 'react'
+import {useAuth} from '../../../contexts/AuthContext'
 
-const UserSidebar = memo(({ activeTab, onTabChange }) => {
-  const { user, logout } = useAuth()
+const UserSidebar = memo(({activeTab, onTabChange}) => {
+  const {user, logout} = useAuth()
 
   const menuItems = [
     {
@@ -40,11 +40,12 @@ const UserSidebar = memo(({ activeTab, onTabChange }) => {
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
-      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+      paddingTop: '0px'
     }}>
-      <div style={{ padding: '24px', flex: 1 }}>
+      <div style={{padding: '0 24px 24px', flex: 1}}>
         {/* Customer Navigation */}
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <nav style={{display: 'flex', flexDirection: 'column', gap: '4px'}}>
           <h3 style={{
             fontSize: '12px',
             fontWeight: '600',
@@ -53,7 +54,7 @@ const UserSidebar = memo(({ activeTab, onTabChange }) => {
             letterSpacing: '0.05em',
             marginBottom: '16px'
           }}>My Account</h3>
-          
+
           {menuItems.map((item) => (
             <button
               key={item.id}
@@ -76,17 +77,17 @@ const UserSidebar = memo(({ activeTab, onTabChange }) => {
                 boxShadow: activeTab === item.id ? '0 1px 2px rgba(0, 0, 0, 0.05)' : 'none'
               }}
               onMouseEnter={(e) => {
-                if (activeTab !== item.id) {
+                if(activeTab !== item.id) {
                   e.target.style.backgroundColor = '#f9fafb'
                 }
               }}
               onMouseLeave={(e) => {
-                if (activeTab !== item.id) {
+                if(activeTab !== item.id) {
                   e.target.style.backgroundColor = 'transparent'
                 }
               }}
             >
-              <span style={{ marginRight: '12px', fontSize: '18px' }}>
+              <span style={{marginRight: '12px', fontSize: '18px'}}>
                 {item.icon}
               </span>
               {item.label}
@@ -94,10 +95,10 @@ const UserSidebar = memo(({ activeTab, onTabChange }) => {
           ))}
         </nav>
       </div>
-      
+
       {/* Logout Button */}
-      <div style={{ padding: '24px', borderTop: '1px solid #e5e7eb' }}>
-        <button 
+      <div style={{padding: '24px', borderTop: '1px solid #e5e7eb'}}>
+        <button
           onClick={handleLogout}
           style={{
             width: '100%',
@@ -121,7 +122,7 @@ const UserSidebar = memo(({ activeTab, onTabChange }) => {
             e.target.style.backgroundColor = 'transparent'
           }}
         >
-          <span style={{ marginRight: '12px', fontSize: '18px' }}>🚪</span>
+          <span style={{marginRight: '12px', fontSize: '18px'}}>🚪</span>
           Logout
         </button>
       </div>

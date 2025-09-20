@@ -32,23 +32,14 @@ const Profile = memo(() => {
   })
   const [isSubmittingAddress, setIsSubmittingAddress] = useState(false)
 
-  // Load user data when component mounts or user changes
-  useEffect(() => {
-    if(user) {
-      setProfileData({
-        username: user.username || '',
-        full_name: user.full_name || '',
-        address: user.address || '',
-        city: user.city || '',
-        zipcode: user.zipcode || '',
-        country: user.country || ''
-      })
-      loadAddresses()
-    }
-  }, [user])
 
   // Load addresses
   const loadAddresses = useCallback(async () => {
+    if(!user?.id) {
+      console.log('🔄 No user ID, skipping address load')
+      return
+    }
+
     try {
       console.log('🔄 Loading addresses for user:', user?.email, '(ID:', user?.id, ')')
       const response = await apiService.getAddresses()
@@ -86,6 +77,21 @@ const Profile = memo(() => {
       console.error('❌ Error loading addresses:', error)
       setAddresses([])
       setDefaultAddress(null)
+    }
+  }, [user])
+
+  // Load user data when component mounts or user changes
+  useEffect(() => {
+    if(user) {
+      setProfileData({
+        username: user.username || '',
+        full_name: user.full_name || '',
+        address: user.address || '',
+        city: user.city || '',
+        zipcode: user.zipcode || '',
+        country: user.country || ''
+      })
+      loadAddresses()
     }
   }, [user])
 
@@ -471,7 +477,7 @@ const Profile = memo(() => {
               {addresses.length > 1 && (
                 <div className="all-addresses">
                   <h4>All Addresses</h4>
-                  {addresses.filter(addr => !addr.is_default).map((address) => (
+                  {addresses.filter(addr => !addr.is_default && addr.id !== defaultAddress?.id).map((address) => (
                     <div key={address.id} className="address-card">
                       <div className="address-header">
                         <h5>{address.full_name}</h5>

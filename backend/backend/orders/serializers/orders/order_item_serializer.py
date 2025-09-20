@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from orders.models.orders.order_item import OrderItem
+from products.serializers.products.product import ProductListSerializer
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
@@ -9,6 +10,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
     variant_title = serializers.CharField(read_only=True)
     unit_price_display = serializers.CharField(source='get_unit_price_display', read_only=True)
     total_price_display = serializers.CharField(source='get_total_price_display', read_only=True)
+    product = ProductListSerializer(read_only=True)
     
     class Meta:
         model = OrderItem
