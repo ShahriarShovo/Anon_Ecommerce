@@ -37,7 +37,7 @@ class CartItemAdmin(admin.ModelAdmin):
     
     def get_total_price(self, obj):
         """Display total price for this cart item"""
-        return f"${obj.get_total_price():.2f}"
+        return f"৳{obj.get_total_price():.2f}"
     get_total_price.short_description = 'Total Price'
 
 
@@ -81,7 +81,7 @@ class WishlistItemAdmin(admin.ModelAdmin):
     
     def get_current_price(self, obj):
         """Display current price of the item"""
-        return f"${obj.get_current_price():.2f}"
+        return f"৳{obj.get_current_price():.2f}"
     get_current_price.short_description = 'Current Price'
     
     def is_available(self, obj):

@@ -49,11 +49,12 @@ def get_or_create_cart(request):
     # Check if user is authenticated and not anonymous
     if request.user.is_authenticated and hasattr(request.user, 'email'):
         # Authenticated user - get or create user cart
-        cart, created = Cart.objects.get_or_create(
-            user=request.user,
-            is_active=True,
-            defaults={'is_active': True}
-        )
+        try:
+            cart = Cart.objects.get(user=request.user, is_active=True)
+        except Cart.DoesNotExist:
+            # Deactivate any existing active carts for this user
+            Cart.objects.filter(user=request.user, is_active=True).update(is_active=False)
+            cart = Cart.objects.create(user=request.user, is_active=True)
     else:
         # Guest user - get or create session cart
         session_key = request.session.session_key
@@ -61,11 +62,12 @@ def get_or_create_cart(request):
             request.session.create()
             session_key = request.session.session_key
         
-        cart, created = Cart.objects.get_or_create(
-            session_key=session_key,
-            is_active=True,
-            defaults={'is_active': True}
-        )
+        try:
+            cart = Cart.objects.get(session_key=session_key, is_active=True)
+        except Cart.DoesNotExist:
+            # Deactivate any existing active carts for this session
+            Cart.objects.filter(session_key=session_key, is_active=True).update(is_active=False)
+            cart = Cart.objects.create(session_key=session_key, is_active=True)
     
     return cart
 
