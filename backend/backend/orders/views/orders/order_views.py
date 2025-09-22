@@ -44,25 +44,51 @@ def create_order(request):
                     'message': 'Cart is empty'
                 }, status=status.HTTP_400_BAD_REQUEST)
             
-            # Create address from request data
+            # Handle address - use existing or create new
             address_data = request.data.get('address', {})
             print(f"🛒 Address data: {address_data}")
             
-            address_serializer = AddressCreateSerializer(
-                data=address_data,
-                context={'request': request}
-            )
-            
-            if not address_serializer.is_valid():
-                print(f"🛒 Address validation failed: {address_serializer.errors}")
-                return Response({
-                    'success': False,
-                    'message': 'Invalid address data',
-                    'errors': address_serializer.errors
-                }, status=status.HTTP_400_BAD_REQUEST)
-            
-            address = address_serializer.save()
-            print(f"🛒 Address created: ID {address.id}")
+            # Check if address_id is provided (for existing address)
+            address_id = request.data.get('address_id')
+            if address_id:
+                try:
+                    address = Address.objects.get(id=address_id, user=request.user)
+                    print(f"🛒 Using existing address: ID {address.id}")
+                except Address.DoesNotExist:
+                    print(f"🛒 Address not found: ID {address_id}")
+                    return Response({
+                        'success': False,
+                        'message': 'Address not found'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                # Try to find existing address with same details
+                try:
+                    address = Address.objects.get(
+                        user=request.user,
+                        full_name=address_data.get('full_name'),
+                        phone_number=address_data.get('phone_number'),
+                        address_line_1=address_data.get('address_line_1'),
+                        city=address_data.get('city'),
+                        country=address_data.get('country')
+                    )
+                    print(f"🛒 Using existing address: ID {address.id}")
+                except Address.DoesNotExist:
+                    # Create new address
+                    address_serializer = AddressCreateSerializer(
+                        data=address_data,
+                        context={'request': request}
+                    )
+                    
+                    if not address_serializer.is_valid():
+                        print(f"🛒 Address validation failed: {address_serializer.errors}")
+                        return Response({
+                            'success': False,
+                            'message': 'Invalid address data',
+                            'errors': address_serializer.errors
+                        }, status=status.HTTP_400_BAD_REQUEST)
+                    
+                    address = address_serializer.save()
+                    print(f"🛒 Address created: ID {address.id}")
             
             # Get payment method
             payment_method_type = request.data.get('payment_method', 'cash_on_delivery')
@@ -171,6 +197,20 @@ class OrderListView(generics.ListAPIView):
         return Order.objects.filter(user=self.request.user).order_by('-created_at')
 
 
+class ActiveOrderListView(generics.ListAPIView):
+    """
+    List active orders (pending, confirmed, processing, shipped) for the authenticated user
+    """
+    serializer_class = OrderSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        return Order.objects.filter(
+            user=self.request.user,
+            status__in=['pending', 'confirmed', 'processing', 'shipped']
+        ).order_by('-created_at')
+
+
 class OrderDetailView(generics.RetrieveAPIView):
     """
     Retrieve a specific order
@@ -180,3 +220,130 @@ class OrderDetailView(generics.RetrieveAPIView):
     
     def get_queryset(self):
         return Order.objects.filter(user=self.request.user)
+
+
+class DeliveredOrderListView(generics.ListAPIView):
+    """
+    List all delivered orders for the authenticated user
+    """
+    serializer_class = OrderSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        return Order.objects.filter(
+            user=self.request.user,
+            status='delivered'
+        ).order_by('-delivered_at', '-created_at')
+
+
+class CancelledRefundedOrderListView(generics.ListAPIView):
+    """
+    List all cancelled and refunded orders for the authenticated user
+    """
+    serializer_class = OrderSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        return Order.objects.filter(
+            user=self.request.user,
+            status__in=['cancelled', 'refunded']
+        ).order_by('-updated_at', '-created_at')
+
+
+@api_view(['PATCH'])
+@permission_classes([permissions.IsAuthenticated])
+def update_order_status(request, order_id):
+    """
+    Update order status (for admin use or order management)
+    """
+    try:
+        # Check if user is admin or staff
+        if not (request.user.is_staff or request.user.is_superuser):
+            return Response({
+                'success': False,
+                'message': 'Only admin users can update order status'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Admin can update any order, not just their own
+        order = get_object_or_404(Order, id=order_id)
+        
+        new_status = request.data.get('status')
+        if not new_status:
+            return Response({
+                'success': False,
+                'message': 'Status is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate status
+        valid_statuses = [choice[0] for choice in Order.STATUS_CHOICES]
+        if new_status not in valid_statuses:
+            return Response({
+                'success': False,
+                'message': f'Invalid status. Valid statuses are: {", ".join(valid_statuses)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Update order status
+        order.status = new_status
+        
+        # If marking as delivered, set delivered_at timestamp
+        if new_status == 'delivered' and not order.delivered_at:
+            from django.utils import timezone
+            order.delivered_at = timezone.now()
+        
+        order.save()
+        
+        serializer = OrderSerializer(order, context={'request': request})
+        
+        return Response({
+            'success': True,
+            'message': f'Order status updated to {new_status}',
+            'order': serializer.data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'success': False,
+            'message': f'Failed to update order status: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['PATCH'])
+@permission_classes([permissions.IsAuthenticated])
+def cancel_order(request, order_id):
+    """
+    Allow customers to cancel their own pending orders
+    """
+    try:
+        # Get the order and ensure it belongs to the current user
+        order = get_object_or_404(Order, id=order_id, user=request.user)
+        
+        # Check if order is in pending status
+        if order.status != 'pending':
+            return Response({
+                'success': False,
+                'message': f'Order can only be cancelled when status is pending. Current status: {order.status}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get cancel reason from request
+        cancel_reason = request.data.get('cancel_reason', 'Cancelled by customer')
+        
+        # Update order status to cancelled
+        order.status = 'cancelled'
+        order.save()
+        
+        # You can also store the cancel reason in a separate model if needed
+        # For now, we'll just update the status
+        
+        serializer = OrderSerializer(order, context={'request': request})
+        
+        return Response({
+            'success': True,
+            'message': 'Order cancelled successfully',
+            'order': serializer.data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'success': False,
+            'message': f'Failed to cancel order: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
