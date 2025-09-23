@@ -9,4 +9,7 @@ urlpatterns = [
     path('profile/', views.current_user),
     path('update-profile/<int:user_id>/', views.update_profile),
     path('change-password/', views.User_Change_Password.as_view()),
+    path('users/', views.UserListView.as_view()),  # Admin users list
+    path('users/<int:pk>/', views.UserDetailView.as_view()),  # User detail/update
+    path('statistics/', views.admin_statistics),  # Admin dashboard statistics
 ]

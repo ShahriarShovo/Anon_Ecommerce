@@ -72,6 +72,56 @@ class ProfileSerializer(serializers.ModelSerializer):
         fields=['id', 'email', 'username', 'full_name', 'address', 'city', 'zipcode', 'country', 'phone', 'is_staff', 'is_superuser']
 
 
+class UserListSerializer(serializers.ModelSerializer):
+    """
+    Serializer for listing users (admin only)
+    """
+    full_name = serializers.CharField(source='profile.full_name', read_only=True)
+    phone = serializers.CharField(source='profile.phone', read_only=True)
+    username = serializers.CharField(source='profile.username', read_only=True)
+    addresses = serializers.SerializerMethodField()
+    orders_count = serializers.SerializerMethodField()
+    total_spent = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'full_name', 'phone', 'username', 'is_active', 'is_staff', 'is_superuser', 'date_joined', 'last_login', 'addresses', 'orders_count', 'total_spent']
+    
+    def get_addresses(self, obj):
+        """Get all addresses for the user"""
+        from orders.models.orders.address import Address
+        addresses = Address.objects.filter(user=obj)
+        return [
+            {
+                'id': addr.id,
+                'address_type': addr.address_type,
+                'full_name': addr.full_name,
+                'phone_number': addr.phone_number,
+                'address_line_1': addr.address_line_1,
+                'address_line_2': addr.address_line_2,
+                'city': addr.city,
+                'postal_code': addr.postal_code,
+                'country': addr.country,
+                'is_default': addr.is_default
+            }
+            for addr in addresses
+        ]
+    
+    def get_orders_count(self, obj):
+        """Get total number of orders for the user"""
+        from orders.models.orders.order import Order
+        return Order.objects.filter(user=obj).count()
+    
+    def get_total_spent(self, obj):
+        """Get total amount spent by the user"""
+        from orders.models.orders.order import Order
+        from django.db.models import Sum
+        total = Order.objects.filter(user=obj).aggregate(
+            total=Sum('total_amount')
+        )['total']
+        return float(total) if total else 0.0
+
+
 class User_Password_Change_Serializer(serializers.Serializer):
     password = serializers.CharField(style={'input_type':'password'}, write_only=True)
     confirm_password = serializers.CharField(style={'input_type':'password'}, write_only=True)

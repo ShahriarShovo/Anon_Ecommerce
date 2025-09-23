@@ -105,11 +105,18 @@ class ProductViewSet(viewsets.ModelViewSet):
                         break
                     
                     # Get actual values properly
-                    name_value = request.data.get(option_name_key, [''])[0] if request.data.get(option_name_key) else ''
+                    name_data = request.data.get(option_name_key, [''])
+                    name_value = name_data[0] if name_data and len(name_data) > 0 else ''
+                    print(f"Option name key: {option_name_key}, Raw data: {name_data}, Parsed value: '{name_value}'")
+                    
                     value_key = f'variants[{variant_index}][dynamic_options][{option_index}][value]'
-                    value_value = request.data.get(value_key, [''])[0] if request.data.get(value_key) else ''
+                    value_data = request.data.get(value_key, [''])
+                    value_value = value_data[0] if value_data and len(value_data) > 0 else ''
+                    print(f"Option value key: {value_key}, Raw data: {value_data}, Parsed value: '{value_value}'")
+                    
                     position_key = f'variants[{variant_index}][dynamic_options][{option_index}][position]'
-                    position_value = request.data.get(position_key, [option_index + 1])[0] if request.data.get(position_key) else option_index + 1
+                    position_data = request.data.get(position_key, [option_index + 1])
+                    position_value = position_data[0] if position_data and len(position_data) > 0 else option_index + 1
                     
                     option_data = {
                         'name': str(name_value),
@@ -168,10 +175,39 @@ class ProductViewSet(viewsets.ModelViewSet):
             # Add the parsed variants data
             serializer_data['variants'] = request._variants_data
             
+            # Handle uploaded_images properly - only include actual files
+            uploaded_images = []
+            print(f"Processing uploaded_images from request._mutable_data")
+            for key, value in request._mutable_data.items():
+                print(f"Key: {key}, Value type: {type(value)}, Has read method: {hasattr(value, 'read') if value else 'N/A'}")
+                if key == 'uploaded_images' and hasattr(value, 'read'):  # It's a file
+                    uploaded_images.append(value)
+                    print(f"Added file: {value}")
+            
+            # Also check request.FILES for uploaded_images
+            print(f"Request.FILES: {request.FILES}")
+            for key, value in request.FILES.items():
+                if key == 'uploaded_images':
+                    uploaded_images.append(value)
+                    print(f"Added file from FILES: {value}")
+            
+            serializer_data['uploaded_images'] = uploaded_images
+            print(f"Final uploaded_images: {uploaded_images}")
+            
             print(f"Serializer data structure: {serializer_data}")
             
             serializer = self.get_serializer(data=serializer_data)
-            serializer.is_valid(raise_exception=True)
+            print(f"Serializer data before validation: {serializer_data}")
+            if not serializer.is_valid():
+                print(f"Serializer validation errors: {serializer.errors}")
+                # Return only the first few errors to avoid huge response
+                error_summary = {}
+                for field, errors in serializer.errors.items():
+                    if len(errors) > 5:
+                        error_summary[field] = errors[:5] + [f"... and {len(errors) - 5} more errors"]
+                    else:
+                        error_summary[field] = errors
+                return Response(error_summary, status=status.HTTP_400_BAD_REQUEST)
             self.perform_create(serializer)
             headers = self.get_success_headers(serializer.data)
             return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
@@ -183,7 +219,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             print(f"Error type: {type(e)}")
             import traceback
             traceback.print_exc()
-            raise
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     def get_queryset(self):
         queryset = Product.objects.select_related('category', 'subcategory').prefetch_related(
@@ -379,3 +415,35 @@ class ProductViewSet(viewsets.ModelViewSet):
             'message': f'Successfully updated {updated_count} products',
             'updated_count': updated_count
         })
+
+    def destroy(self, request, *args, **kwargs):
+        """Custom destroy method to handle product deletion with order references"""
+        try:
+            instance = self.get_object()
+            
+            # Check if product is referenced in any orders
+            from orders.models import OrderItem
+            order_items = OrderItem.objects.filter(product=instance)
+            
+            if order_items.exists():
+                # If product is in orders, archive it instead of deleting
+                instance.status = 'archived'
+                instance.save()
+                
+                return Response({
+                    'message': 'Product archived successfully. Cannot delete due to existing orders.',
+                    'archived': True,
+                    'order_count': order_items.count()
+                }, status=status.HTTP_200_OK)
+            else:
+                # If no orders reference this product, delete it
+                self.perform_destroy(instance)
+                return Response({
+                    'message': 'Product deleted successfully.',
+                    'deleted': True
+                }, status=status.HTTP_204_NO_CONTENT)
+                
+        except Exception as e:
+            return Response({
+                'error': f'Failed to delete product: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

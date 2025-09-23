@@ -4,6 +4,7 @@ from django.contrib.auth.models import BaseUserManager, AbstractBaseUser, Permis
 from django.utils.translation import gettext_lazy
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
 # Create your models here.
 
 class MyUserManager(BaseUserManager):
@@ -39,6 +40,8 @@ class User(AbstractBaseUser,PermissionsMixin):
     email=models.EmailField(unique=True, null=False)
     is_staff=models.BooleanField(gettext_lazy('staff status'),default=False, help_text=gettext_lazy('Designates whether the user can log in this site'))
     is_active=models.BooleanField(gettext_lazy('active'),default=True, help_text=gettext_lazy('Designates whether this user should be treated as active . Unselected this instead of deleting accounts'))
+    date_joined=models.DateTimeField(default=timezone.now)
+    last_login=models.DateTimeField(null=True, blank=True)
 
     USERNAME_FIELD='email'
     objects=MyUserManager()

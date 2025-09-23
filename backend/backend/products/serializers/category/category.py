@@ -20,7 +20,7 @@ class CategoryListSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Category
-        fields = ['id', 'name', 'slug', 'is_active', 'subcategories_count']
+        fields = ['id', 'name', 'slug', 'image', 'is_active', 'subcategories_count']
 
     def get_subcategories_count(self, obj):
         return obj.subcategories.filter(is_active=True).count()

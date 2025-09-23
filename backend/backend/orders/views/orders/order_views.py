@@ -194,7 +194,23 @@ class OrderListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
-        return Order.objects.filter(user=self.request.user).order_by('-created_at')
+        # Check if specific user ID is requested (for admin viewing user orders)
+        user_id = self.request.query_params.get('user')
+        
+        if user_id and (self.request.user.is_staff or self.request.user.is_superuser):
+            # Admin can view specific user's orders
+            try:
+                from accounts.models import User
+                target_user = User.objects.get(id=user_id)
+                return Order.objects.filter(user=target_user).order_by('-created_at')
+            except User.DoesNotExist:
+                return Order.objects.none()
+        elif self.request.user.is_staff or self.request.user.is_superuser:
+            # Admin can see all orders
+            return Order.objects.all().order_by('-created_at')
+        else:
+            # Regular users can only see their own orders
+            return Order.objects.filter(user=self.request.user).order_by('-created_at')
 
 
 class ActiveOrderListView(generics.ListAPIView):

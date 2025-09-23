@@ -162,11 +162,13 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
     
     def validate_variants(self, value):
         """Validate variants data"""
+        print(f"Validating variants: {value}")
         if not isinstance(value, list):
             raise serializers.ValidationError("Variants must be a list")
         
         validated_variants = []
         for i, variant_data in enumerate(value):
+            print(f"Validating variant {i}: {variant_data}")
             if not isinstance(variant_data, dict):
                 raise serializers.ValidationError(f"Variant {i} must be a dictionary")
             
@@ -201,13 +203,48 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
                     elif not isinstance(variant_data[field], bool):
                         variant_data[field] = bool(variant_data[field])
             
+            # Validate dynamic_options if present
+            if 'dynamic_options' in variant_data:
+                dynamic_options = variant_data['dynamic_options']
+                print(f"Validating dynamic_options for variant {i}: {dynamic_options}")
+                if not isinstance(dynamic_options, list):
+                    raise serializers.ValidationError(f"Variant {i} dynamic_options must be a list")
+                
+                for j, option in enumerate(dynamic_options):
+                    print(f"Validating option {j}: {option}")
+                    if not isinstance(option, dict):
+                        raise serializers.ValidationError(f"Variant {i} dynamic_options[{j}] must be a dictionary")
+                    
+                    if 'name' not in option or not option['name']:
+                        raise serializers.ValidationError(f"Variant {i} dynamic_options[{j}] must have a name")
+                    
+                    if 'value' not in option or not option['value']:
+                        raise serializers.ValidationError(f"Variant {i} dynamic_options[{j}] must have a value")
+                    
+                    if 'position' not in option:
+                        option['position'] = j + 1
+                    else:
+                        try:
+                            option['position'] = int(option['position'])
+                        except (ValueError, TypeError):
+                            option['position'] = j + 1
+            
             validated_variants.append(variant_data)
         
+        print(f"Validation completed. Validated variants: {validated_variants}")
         return validated_variants
 
     def create(self, validated_data):
         print(f"Validated data keys: {list(validated_data.keys())}")
         print(f"Validated data: {validated_data}")
+        
+        # Debug variants data
+        variants_data = validated_data.get('variants', [])
+        print(f"Variants data in create: {variants_data}")
+        for i, variant in enumerate(variants_data):
+            print(f"Variant {i}: {variant}")
+            if 'dynamic_options' in variant:
+                print(f"Variant {i} dynamic_options: {variant['dynamic_options']}")
         
         uploaded_images = validated_data.pop('uploaded_images', [])
         variants_data = validated_data.pop('variants', [])
@@ -267,7 +304,18 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
             
         except Exception as e:
             print(f"Error creating product: {e}")
+            import traceback
+            traceback.print_exc()
             raise serializers.ValidationError(f"Error creating product: {str(e)}")
+    
+    def is_valid(self, raise_exception=False):
+        """Override is_valid to add more debugging"""
+        is_valid = super().is_valid(raise_exception=False)
+        if not is_valid:
+            print(f"Serializer validation errors: {self.errors}")
+            if raise_exception:
+                raise serializers.ValidationError(self.errors)
+        return is_valid
     
     def update(self, instance, validated_data):
         uploaded_images = validated_data.pop('uploaded_images', [])

@@ -3,14 +3,15 @@ from django.contrib.auth import login, logout, authenticate
 from yaml import serialize
 from accounts.models import Profile, User
 from accounts.serializers import (UserRegistrationSerializers, 
-LoginSerializer,ProfileSerializer,User_Password_Change_Serializer)
+LoginSerializer,ProfileSerializer,User_Password_Change_Serializer, UserListSerializer)
 from rest_framework.decorators import api_view,permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import authenticate, login, logout
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework import generics
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -204,6 +205,95 @@ class User_Change_Password(APIView):
 #         return Response({'message':'Failed to Change Password'}, status=status.HTTP_400_BAD_REQUEST)
 
 
+# Admin Users Management APIs
+class UserListView(generics.ListAPIView):
+    """
+    List all users (admin only)
+    """
+    queryset = User.objects.all().order_by('-date_joined')
+    serializer_class = UserListSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get_queryset(self):
+        # Admin can see all users
+        return User.objects.select_related('profile').all().order_by('-date_joined')
+
+
+class UserDetailView(generics.RetrieveUpdateAPIView):
+    """
+    Retrieve or update user details (admin only)
+    """
+    queryset = User.objects.all()
+    serializer_class = UserListSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get_queryset(self):
+        # Admin can access any user
+        return User.objects.select_related('profile').all()
+
+
+# Admin Statistics API
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminUser])
+def admin_statistics(request):
+    """
+    Get admin dashboard statistics
+    """
+    try:
+        # Import here to avoid circular imports
+        from orders.models.orders.order import Order
+        from products.models.products.product import Product
+        from django.db.models import Sum
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        # Total Orders Count
+        total_orders = Order.objects.count()
+        
+        # Total Products Count (excluding archived)
+        total_products = Product.objects.filter(status='active').count()
+        
+        # Total Users Count
+        total_users = User.objects.count()
+        
+        # Total Revenue (sum of all delivered orders)
+        total_revenue = Order.objects.filter(
+            status='delivered'
+        ).aggregate(
+            total=Sum('total_amount')
+        )['total'] or 0
+        
+        # Recent Orders (last 7 days)
+        week_ago = timezone.now() - timedelta(days=7)
+        recent_orders = Order.objects.filter(
+            created_at__gte=week_ago
+        ).count()
+        
+        # Active Users (users who logged in last 30 days)
+        month_ago = timezone.now() - timedelta(days=30)
+        active_users = User.objects.filter(
+            last_login__gte=month_ago
+        ).count()
+        
+        statistics = {
+            'total_orders': total_orders,
+            'total_products': total_products,
+            'total_users': total_users,
+            'total_revenue': float(total_revenue),
+            'recent_orders': recent_orders,
+            'active_users': active_users,
+        }
+        
+        return Response({
+            'success': True,
+            'data': statistics
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'success': False,
+            'message': f'Failed to fetch statistics: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 
@@ -211,5 +301,3 @@ class User_Change_Password(APIView):
 
 
 
-
-          

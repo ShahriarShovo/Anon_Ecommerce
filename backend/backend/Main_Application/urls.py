@@ -63,10 +63,11 @@ urlpatterns = [
     path('docs/', api_docs, name='api-docs'),
     
     path('admin/', admin.site.urls),
-    path('accounts/', include('accounts.urls')),
+    path('api/accounts/', include('accounts.urls')),
     path('api/products/', include('products.urls')),
     path('api/', include('cart.urls')),  # Cart and Wishlist APIs
     path('api/orders/', include('orders.urls')),  # Orders APIs
+    path('api/analytics/', include('analytics.urls')),  # Analytics APIs
     path('api/invoice/', include('invoice.urls')),  # Invoice APIs
 ]
 
