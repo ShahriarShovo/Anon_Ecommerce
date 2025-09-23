@@ -47,9 +47,50 @@ class CategoryViewSet(viewsets.ModelViewSet):
     def retrieve(self, request, slug=None):
         """Get category details with subcategories"""
         try:
-            category = Category.objects.get(slug=slug)
+            category = Category.objects.prefetch_related('subcategories').get(slug=slug)
             serializer = CategorySerializer(category)
             return Response(serializer.data)
+        except Category.DoesNotExist:
+            return Response(
+                {'error': 'Category not found'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+    @swagger_auto_schema(
+        operation_description="Get subcategories for a specific category",
+        responses={200: openapi.Response('Subcategories list', openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'subcategories': openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Schema(
+                        type=openapi.TYPE_OBJECT,
+                        properties={
+                            'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                            'name': openapi.Schema(type=openapi.TYPE_STRING),
+                            'slug': openapi.Schema(type=openapi.TYPE_STRING),
+                            'image': openapi.Schema(type=openapi.TYPE_STRING),
+                        }
+                    )
+                )
+            }
+        ))}
+    )
+    @action(detail=True, methods=['get'])
+    def subcategories(self, request, slug=None):
+        """Get subcategories for a specific category"""
+        try:
+            category = Category.objects.get(slug=slug)
+            subcategories = category.subcategories.filter(is_active=True)
+            subcategories_data = []
+            for subcat in subcategories:
+                subcategories_data.append({
+                    'id': subcat.id,
+                    'name': subcat.name,
+                    'slug': subcat.slug,
+                    'image': subcat.image.url if subcat.image else None,
+                })
+            return Response({'subcategories': subcategories_data})
         except Category.DoesNotExist:
             return Response(
                 {'error': 'Category not found'}, 

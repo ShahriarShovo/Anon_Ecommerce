@@ -308,6 +308,111 @@ class ProductViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     @swagger_auto_schema(
+        operation_description="Get products by category and subcategory",
+        manual_parameters=[
+            openapi.Parameter(
+                'category',
+                openapi.IN_QUERY,
+                description="Category slug",
+                type=openapi.TYPE_STRING,
+                required=True
+            ),
+            openapi.Parameter(
+                'subcategory',
+                openapi.IN_QUERY,
+                description="Subcategory slug (optional)",
+                type=openapi.TYPE_STRING,
+                required=False
+            )
+        ],
+        responses={200: openapi.Response('Products list with category info', openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'products': openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Schema(type=openapi.TYPE_OBJECT)
+                ),
+                'category': openapi.Schema(type=openapi.TYPE_OBJECT),
+                'subcategory': openapi.Schema(type=openapi.TYPE_OBJECT),
+                'total_count': openapi.Schema(type=openapi.TYPE_INTEGER)
+            }
+        ))}
+    )
+    @action(detail=False, methods=['get'])
+    def category_products(self, request):
+        """Get products by category and optionally subcategory"""
+        category_slug = request.query_params.get('category')
+        subcategory_slug = request.query_params.get('subcategory')
+        
+        if not category_slug:
+            return Response(
+                {'error': 'Category parameter is required'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            from products.models import Category, SubCategory
+            
+            # Get category info
+            category = Category.objects.get(slug=category_slug)
+            category_data = {
+                'id': category.id,
+                'name': category.name,
+                'slug': category.slug,
+                'description': category.description,
+                'image': category.image.url if category.image else None
+            }
+            
+            # Get subcategory info if provided
+            subcategory_data = None
+            if subcategory_slug:
+                try:
+                    subcategory = SubCategory.objects.get(slug=subcategory_slug, category=category)
+                    subcategory_data = {
+                        'id': subcategory.id,
+                        'name': subcategory.name,
+                        'slug': subcategory.slug,
+                        'description': subcategory.description,
+                        'image': subcategory.image.url if subcategory.image else None
+                    }
+                except SubCategory.DoesNotExist:
+                    return Response(
+                        {'error': 'Subcategory not found'}, 
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+            
+            # Filter products
+            products_queryset = self.get_queryset().filter(category__slug=category_slug, status='active')
+            
+            if subcategory_slug:
+                products_queryset = products_queryset.filter(subcategory__slug=subcategory_slug)
+            
+            # Serialize products and fix image URLs
+            products_serializer = ProductListSerializer(products_queryset, many=True)
+            products_data = products_serializer.data
+            
+            # Fix image URLs to be full URLs like homepage API
+            for product_data in products_data:
+                if product_data.get('primary_image') and product_data['primary_image'].get('image_url'):
+                    image_url = product_data['primary_image']['image_url']
+                    if not image_url.startswith('http'):
+                        # Add domain for relative URLs
+                        product_data['primary_image']['image_url'] = f"http://127.0.0.1:8000{image_url}"
+            
+            return Response({
+                'products': products_data,
+                'category': category_data,
+                'subcategory': subcategory_data,
+                'total_count': products_queryset.count()
+            })
+            
+        except Category.DoesNotExist:
+            return Response(
+                {'error': 'Category not found'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+    @swagger_auto_schema(
         operation_description="Get product variants",
         responses={200: ProductVariantSerializer(many=True)}
     )

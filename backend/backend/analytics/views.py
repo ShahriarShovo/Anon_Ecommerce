@@ -309,19 +309,20 @@ def generate_excel_report(request):
             orders = Order.objects.filter(
                 created_at__date__gte=start_date,
                 created_at__date__lte=end_date
-            ).select_related('user').prefetch_related('orderitem_set').order_by('-created_at')
+            ).select_related('user', 'payment').prefetch_related('items').order_by('-created_at')
             
             # Add data rows
             row = 2
             for order in orders:
-                items = ', '.join([f"{item.product.title} x{item.quantity}" for item in order.orderitem_set.all()])
+                items = ', '.join([f"{item.product.title} x{item.quantity}" for item in order.items.all()])
+                payment_status = order.payment.status if order.payment else 'No Payment'
                 
                 ws.cell(row=row, column=1, value=order.id).border = border
                 ws.cell(row=row, column=2, value=order.user.email).border = border
                 ws.cell(row=row, column=3, value=order.created_at.strftime('%Y-%m-%d %H:%M')).border = border
                 ws.cell(row=row, column=4, value=order.status).border = border
                 ws.cell(row=row, column=5, value=f"${order.total_amount:.2f}").border = border
-                ws.cell(row=row, column=6, value=order.payment_status).border = border
+                ws.cell(row=row, column=6, value=payment_status).border = border
                 ws.cell(row=row, column=7, value=items).border = border
                 row += 1
                 
@@ -343,13 +344,13 @@ def generate_excel_report(request):
             users = User.objects.filter(
                 date_joined__date__gte=start_date,
                 date_joined__date__lte=end_date
-            ).select_related('profile').prefetch_related('order_set')
+            ).select_related('profile').prefetch_related('orders')
             
             # Add data rows
             row = 2
             for user in users:
-                orders_count = user.order_set.count()
-                total_spent = sum(float(order.total_amount) for order in user.order_set.all())
+                orders_count = user.orders.count()
+                total_spent = sum(float(order.total_amount) for order in user.orders.all())
                 
                 ws.cell(row=row, column=1, value=user.id).border = border
                 ws.cell(row=row, column=2, value=user.email).border = border
@@ -379,20 +380,23 @@ def generate_excel_report(request):
             products = Product.objects.filter(
                 created_at__date__gte=start_date,
                 created_at__date__lte=end_date
-            ).select_related('category').prefetch_related('orderitem_set')
+            ).select_related('category').prefetch_related('order_items')
             
             # Add data rows
             row = 2
             for product in products:
-                orders_count = product.orderitem_set.count()
-                total_sold = sum(item.quantity for item in product.orderitem_set.all())
+                orders_count = product.order_items.count()
+                total_sold = sum(item.quantity for item in product.order_items.all())
+                
+                price_display = f"${product.price:.2f}" if product.price is not None else "N/A"
+                created_date = product.created_at.strftime('%Y-%m-%d') if product.created_at else "N/A"
                 
                 ws.cell(row=row, column=1, value=product.id).border = border
                 ws.cell(row=row, column=2, value=product.title).border = border
                 ws.cell(row=row, column=3, value=product.category.name if product.category else '').border = border
-                ws.cell(row=row, column=4, value=f"${product.price:.2f}").border = border
+                ws.cell(row=row, column=4, value=price_display).border = border
                 ws.cell(row=row, column=5, value=product.status).border = border
-                ws.cell(row=row, column=6, value=product.created_at.strftime('%Y-%m-%d')).border = border
+                ws.cell(row=row, column=6, value=created_date).border = border
                 ws.cell(row=row, column=7, value=orders_count).border = border
                 ws.cell(row=row, column=8, value=total_sold).border = border
                 row += 1
