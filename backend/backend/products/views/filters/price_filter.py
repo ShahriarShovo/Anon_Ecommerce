@@ -88,38 +88,37 @@ class PriceFilterViewSet(viewsets.ViewSet):
         # Base queryset - only active products
         queryset = Product.objects.filter(status='active')
         
-        # Annotate effective min/max prices to consider variant prices when present.
-        # If a product has variants, use Min/Max of variant prices; otherwise fall back to product.price
-        queryset = queryset.annotate(
-            effective_min_price=Coalesce(Min('variants__price'), F('price')),
-            effective_max_price=Coalesce(Max('variants__price'), F('price')),
-        )
-        
         # Apply filters
         filters_applied = {}
         
-        # Price range filters
+        # Price range filters - use simple price filtering
         min_price = request.query_params.get('min_price')
-        if min_price:
-            try:
-                min_price = float(min_price)
-                # Include products where ANY variant (or the simple product price) can satisfy the minimum.
-                # Use effective_max_price >= min_price to ensure there exists a price point >= min_price.
-                queryset = queryset.filter(effective_max_price__gte=min_price)
-                filters_applied['min_price'] = min_price
-            except ValueError:
-                pass
-        
         max_price = request.query_params.get('max_price')
-        if max_price:
-            try:
-                max_price = float(max_price)
-                # Include products where ANY variant (or the simple product price) can satisfy the maximum.
-                # Use effective_min_price <= max_price to ensure there exists a price point <= max_price.
-                queryset = queryset.filter(effective_min_price__lte=max_price)
-                filters_applied['max_price'] = max_price
-            except ValueError:
-                pass
+        min_val = None
+        max_val = None
+        try:
+            if min_price is not None and min_price != '':
+                min_val = float(min_price)
+                filters_applied['min_price'] = min_val
+        except ValueError:
+            min_val = None
+        try:
+            if max_price is not None and max_price != '':
+                max_val = float(max_price)
+                filters_applied['max_price'] = max_val
+        except ValueError:
+            max_val = None
+
+        # Apply simple price range filters
+        if min_val is not None and max_val is not None:
+            # Show products where the main price is within the range
+            queryset = queryset.filter(price__gte=min_val, price__lte=max_val)
+        elif min_val is not None:
+            # Show products where the main price is >= min
+            queryset = queryset.filter(price__gte=min_val)
+        elif max_val is not None:
+            # Show products where the main price is <= max
+            queryset = queryset.filter(price__lte=max_val)
         
         # Category filter
         category_slug = request.query_params.get('category')

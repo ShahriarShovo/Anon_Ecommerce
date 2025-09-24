@@ -1,7 +1,8 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.db.models import Q
+from django.db.models import Q, Min, Max, F
+from django.db.models.functions import Coalesce
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
@@ -128,24 +129,39 @@ class SearchViewSet(viewsets.ViewSet):
             queryset = queryset.filter(subcategory__slug=subcategory_slug)
             filters_applied['subcategory'] = subcategory_slug
         
-        # Price range filters
+        # Price range filters aligned with variants and simple prices
+        # Annotate effective bounds: per product, min/max across variants or fallback to product.price
+        queryset = queryset.annotate(
+            effective_min_price=Coalesce(Min('variants__price'), F('price')),
+            effective_max_price=Coalesce(Max('variants__price'), F('price')),
+        )
+
         min_price = request.query_params.get('min_price')
-        if min_price:
-            try:
-                min_price = float(min_price)
-                queryset = queryset.filter(price__gte=min_price)
-                filters_applied['min_price'] = min_price
-            except ValueError:
-                pass
-        
         max_price = request.query_params.get('max_price')
-        if max_price:
-            try:
-                max_price = float(max_price)
-                queryset = queryset.filter(price__lte=max_price)
-                filters_applied['max_price'] = max_price
-            except ValueError:
-                pass
+        min_val = None
+        max_val = None
+        try:
+            if min_price is not None and min_price != '':
+                min_val = float(min_price)
+                filters_applied['min_price'] = min_val
+        except ValueError:
+            min_val = None
+        try:
+            if max_price is not None and max_price != '':
+                max_val = float(max_price)
+                filters_applied['max_price'] = max_val
+        except ValueError:
+            max_val = None
+
+        if min_val is not None and max_val is not None:
+            queryset = queryset.filter(
+                effective_min_price__gte=min_val,
+                effective_max_price__lte=max_val,
+            )
+        elif min_val is not None:
+            queryset = queryset.filter(effective_min_price__gte=min_val)
+        elif max_val is not None:
+            queryset = queryset.filter(effective_max_price__lte=max_val)
         
         # Order by created_at for now (simplified)
         queryset = queryset.order_by('-created_at')
