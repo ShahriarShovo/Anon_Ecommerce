@@ -141,10 +141,10 @@ class MessageViewSet(viewsets.ModelViewSet):
         else:
             unread_count = sum(conv.unread_user_count for conv in conversations)
         
-        print(f"Unread count API - User: {user.email}, Is staff: {user.is_staff}, Conversations: {len(conversations)}")
+        # print(f"Unread count API - User: {user.email}, Is staff: {user.is_staff}, Conversations: {len(conversations)}")
         for conv in conversations:
             print(f"Conversation {conv.id}: unread_user_count={conv.unread_user_count}, unread_staff_count={conv.unread_staff_count}")
-        print(f"Total unread count: {unread_count}")
+        # print(f"Total unread count: {unread_count}")
         
         return Response({'unread_count': unread_count})
     

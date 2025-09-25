@@ -148,7 +148,7 @@ class ConversationInboxView(viewsets.ReadOnlyModelViewSet):
         conversations = Conversation.objects.all()
         total_unread = sum(conv.unread_staff_count for conv in conversations)
         
-        print(f"Inbox unread count API - User: {user.email}, Total unread: {total_unread}")
+        # print(f"Inbox unread count API - User: {user.email}, Total unread: {total_unread}")
         
         return Response({'unread_count': total_unread})
     
@@ -236,18 +236,18 @@ class ConversationInboxView(viewsets.ReadOnlyModelViewSet):
         
         online_staff = recent_staff.exists()
         
-        print(f"Admin status check - Time: {timezone.now()}")
-        print(f"Admin status check - One minute ago: {one_minute_ago}")
-        print(f"Admin status check - Recent staff count: {recent_staff.count()}")
+        # print(f"Admin status check - Time: {timezone.now()}")
+        # print(f"Admin status check - One minute ago: {one_minute_ago}")
+        # print(f"Admin status check - Recent staff count: {recent_staff.count()}")
         
         for staff in recent_staff:
-            print(f"Recent staff: {staff.email}, last_login: {staff.last_login}")
+            # print(f"Recent staff: {staff.email}, last_login: {staff.last_login}")
             print(f"Time difference: {timezone.now() - staff.last_login}")
         
         # If no recent login, check active sessions but be very strict
         if not online_staff:
             active_sessions = Session.objects.filter(expire_date__gte=timezone.now())
-            print(f"Admin status check - Active sessions count: {active_sessions.count()}")
+            # print(f"Admin status check - Active sessions count: {active_sessions.count()}")
             
             # Only check sessions that are very recent (created within last 2 minutes)
             two_minutes_ago = timezone.now() - timedelta(minutes=2)
@@ -264,14 +264,14 @@ class ConversationInboxView(viewsets.ReadOnlyModelViewSet):
                     if user_id:
                         user = User.objects.get(id=user_id)
                         if (user.is_staff or user.is_superuser) and user.is_active:
-                            print(f"Found recent staff session for: {user.email}")
+                            # print(f"Found recent staff session for: {user.email}")
                             online_staff = True
                             break
                 except Exception as e:
-                    print(f"Session decode error: {e}")
+                    # print(f"Session decode error: {e}")
                     continue
         
-        print(f"Admin status check - Final result: Online staff: {online_staff}")
+        # print(f"Admin status check - Final result: Online staff: {online_staff}")
         
         return Response({
             'is_online': online_staff,

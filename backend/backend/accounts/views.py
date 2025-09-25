@@ -150,7 +150,7 @@ def current_user(request):
 @permission_classes([IsAuthenticated])
 def update_profile(request, user_id):
     try:
-        print('request  data = ', request.data)
+        # print('request  data = ', request.data)
         profile = Profile.objects.get(user__id=user_id)
         update_serializer=ProfileSerializer(profile, data=request.data)
         
