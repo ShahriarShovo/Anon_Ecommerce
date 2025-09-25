@@ -159,7 +159,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         if message_ids:
             await self.mark_messages_read(message_ids)
             
-            # Notify other participants
+            # Notify other participants in the conversation
             await self.channel_layer.group_send(
                 self.conversation_group_name,
                 {
@@ -168,6 +168,27 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                     'message_ids': message_ids
                 }
             )
+
+            # Also notify admin inbox list to update unread counters in real time
+            try:
+                # Fetch minimal conversation data for update
+                from ...models import Conversation
+                convo = await database_sync_to_async(Conversation.objects.get)(id=self.conversation_id)
+                payload = {
+                    'id': str(convo.id),
+                    'last_message_at': getattr(convo, 'last_message_at', None).isoformat() if getattr(convo, 'last_message_at', None) else None,
+                    # Prefer staff unread counter field if present
+                    'unread_count': getattr(convo, 'unread_staff_count', 0)
+                }
+                await self.channel_layer.group_send(
+                    'admin_inbox',
+                    {
+                        'type': 'conversation_updated',
+                        'conversation': payload
+                    }
+                )
+            except Exception as e:
+                print(f"Warning: failed to notify admin_inbox on messages_read: {e}")
     
     async def chat_message(self, event):
         """Send chat message to WebSocket"""
