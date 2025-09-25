@@ -21,6 +21,7 @@ ALLOWED_HOSTS = ['*']
 # Application definition
 
 INSTALLED_APPS = [
+    "daphne",
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -33,7 +34,8 @@ INSTALLED_APPS = [
     'orders',
     'invoice',
     'analytics',
-    'rest_framework',
+    'chat_and_notifications',
+    'rest_framework', 
     'drf_yasg',
     'corsheaders',
 ]
@@ -238,4 +240,33 @@ SWAGGER_SETTINGS = {
     'DEEP_LINKING': True,
     'SHOW_EXTENSIONS': True,
     'SHOW_COMMON_EXTENSIONS': True,
+}
+
+# Channels and WebSocket Settings
+ASGI_APPLICATION = 'Main_Application.asgi.application'
+
+# Channel layer configuration (using in-memory for development)
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer'
+    }
+}
+
+# For production, use Redis:
+# CHANNEL_LAYERS = {
+#     'default': {
+#         'BACKEND': 'channels_redis.core.RedisChannelLayer',
+#         'CONFIG': {
+#             "hosts": [('127.0.0.1', 6379)],
+#         },
+#     },
+# }
+
+# Chat system settings
+CHAT_SETTINGS = {
+    'MAX_MESSAGE_LENGTH': 1000,
+    'MESSAGE_RATE_LIMIT': 10,  # messages per minute
+    'TYPING_TIMEOUT': 5,  # seconds
+    'ONLINE_TIMEOUT': 30,  # seconds
+    'MAX_CONVERSATIONS_PER_USER': 10,
 }

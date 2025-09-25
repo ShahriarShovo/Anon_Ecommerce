@@ -98,7 +98,8 @@ class User_login(APIView):
                     'token':token,
                     'user_type': user_type,
                     'is_admin': user.is_staff or user.is_superuser,
-                    'is_superuser': user.is_superuser
+                    'is_superuser': user.is_superuser,
+                    'is_staff': user.is_staff
                 }, status=status.HTTP_200_OK)
             else:
                 return Response({'message':'User no Found'}, status=status.HTTP_404_NOT_FOUND)

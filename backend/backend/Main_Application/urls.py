@@ -69,6 +69,7 @@ urlpatterns = [
     path('api/orders/', include('orders.urls')),  # Orders APIs
     path('api/analytics/', include('analytics.urls')),  # Analytics APIs
     path('api/invoice/', include('invoice.urls')),  # Invoice APIs
+    path('', include('chat_and_notifications.urls')),  # Chat APIs
 ]
 
 # Serve media files during development

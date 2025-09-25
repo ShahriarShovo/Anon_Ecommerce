@@ -1,0 +1,181 @@
+Chat & Notification System — Phased Plan
+
+Phase 1 — Requirements and UX
+- Roles: admin, staff, authenticated user.
+- User flows:
+  - Authenticated user sees floating chat icon on all accessible pages → opens chatbox → sends message to admin.
+  - Admin/staff receive messages live if online; otherwise messages are stored for later reply.
+  - Admin/staff reply updates user chat in real time; if user is offline, increment unread counters and deliver on next online session.
+- Wireframes:
+  - Floating button + compact chat panel (header with title and close/minimize, scrollable messages, input area, typing indicator, unread badge).
+  - Admin inbox: conversation list with unread counts, filters (open/unread/assigned), conversation view, quick reply.
+
+Phase 2 — Architecture and Stack
+- Backend: Django + Django REST Framework for REST APIs; Django Channels for WebSocket real-time transport.
+- Realtime: Redis as the Channels layer and presence store.
+- Database: PostgreSQL (or SQLite for dev) for persistence.
+- Frontend: Reusable floating widget (vanilla JS or React, matching existing frontend), admin inbox UI (React or Django Templates/HTMX, depending on project conventions).
+- Auth: Reuse existing session/JWT; WebSocket auth via session or token (querystring/header) through Channels auth middleware.
+
+Phase 3 — Data Model
+- Conversation
+  - id, created_at, updated_at
+  - customer (FK to User), assigned_to (FK to User; admin/staff; nullable)
+  - status: open/closed
+  - last_message_at
+  - unread_user_count, unread_staff_count
+- Message
+  - id, conversation (FK), sender (FK to User or role enum), text, attachments (optional), created_at
+  - delivery_status: sent/delivered/read (per recipient)
+- Participant/Presence
+  - For presence, store online status and last_seen in Redis keyed by user id
+- Notification
+  - id, user (FK), type (message_received, assignment, etc.), payload (JSON summary), created_at, read_at
+
+Phase 4 — REST APIs
+- User-facing
+  - GET /api/chat/conversations/ (list or auto-create latest conversation)
+  - POST /api/chat/conversations/:id/messages/ (send message)
+  - GET /api/chat/conversations/:id/messages/?cursor=… (history pagination)
+  - POST /api/chat/conversations/:id/read (mark as read by user)
+  - GET /api/chat/unread_count
+- Admin/staff
+  - GET /api/chat/inbox/?status=open&search=… (list conversations with filters)
+  - GET /api/chat/conversations/:id/messages/ (history)
+  - POST /api/chat/conversations/:id/messages/ (reply)
+  - POST /api/chat/conversations/:id/assign (assign to staff)
+  - POST /api/chat/conversations/:id/close (close conversation)
+  - POST /api/chat/conversations/:id/read (mark as read by staff)
+
+Phase 5 — WebSocket (Realtime)
+- Endpoints
+  - ws/chat/user/<conversation_id>/ — user-specific conversation channel
+  - ws/chat/admin/ — admin/staff lobby for inbox updates; optionally ws/chat/admin/<conversation_id>/
+- Events
+  - message:new {conversation_id, message}
+  - message:delivered {message_id}
+  - message:read {conversation_id, side}
+  - presence:update {user_id, online}
+  - typing:start {conversation_id, user_id}
+  - typing:stop {conversation_id, user_id}
+- Presence & delivery
+  - Heartbeat pings from clients; server updates Redis presence
+  - If recipient online → push WS event immediately; else store message and increment unread counts
+
+Phase 6 — UI/UX Implementation
+- Floating chat widget (authenticated users only)
+  - Globally injected small footprint script; lazy loads when user interacts
+  - Shows unread badge; reconnect with backoff; queues outbound messages offline
+  - Chat panel with virtualized message list, input box, send button, typing indicator
+- Admin/staff inbox
+  - Live-updating list with unread counts, filters (open/unread/assigned/me), search
+  - Conversation view with typing indicator, delivery/read receipts, quick actions (assign, close)
+
+Phase 7 — Notifications
+- Real-time: WS toasts for online recipients
+- Offline: store unread; optional email notifications or push (if configured)
+- Badges: maintain unread counts for both sides; reset on read endpoints
+
+Phase 8 — Security & Compliance
+- Permissions: users can only access their own conversation(s); admin/staff roles enforced
+- Throttling: limit message frequency per user
+- Validation: max message length, attachment types/size; sanitize content
+- Audit: log admin actions (reply, assign, close)
+
+Phase 9 — Testing
+- Unit: models (counters, status), serializers (validation), permissions
+- Integration: REST endpoints (auth, pagination, unread), WebSocket consumers (auth, events)
+- E2E: user→admin live chat, offline message then later reply, unread transitions, presence
+- Load: simulate hundreds of concurrent chats and measure latency
+
+Phase 10 — Deployment & Ops
+- ASGI: run via daphne/uvicorn; configure Channels workers
+- Redis: provision and secure; set connection via env vars
+- Scaling: horizontal workers; ensure sticky sessions where needed for WS; health checks
+- Monitoring: Sentry/logging for WS and REST; metrics on message delivery and backlog
+- Runbook: reconnect strategies, Redis outages, backpressure handling
+
+Phase 11 — Enhancements (Optional)
+- Attachments (images/files), canned responses, assignment rules/round-robin, SLA timers
+- Read receipts per message, typing indicators refinements, search across conversations
+- Export chat transcript to email/PDF, analytics dashboard (CSAT, response time)
+
+Milestones
+- M1: Data model + REST basics + floating widget MVP (send/receive via REST)
+- M2: WebSocket realtime (user and admin), unread counts, presence
+- M3: Admin inbox UX complete, assignment and close flows
+- M4: Notifications (toasts + optional email), security hardening, tests
+- M5: Deployment readiness and runbook
+
+
+Phase 1 — Detailed UI/UX Specification (Aligned with Current UI)
+
+Design principles
+- Match existing Bootstrap and ui.css look-and-feel: use .btn, .badge, .shadow, .card, .rounded, .text-muted, spacing utilities (p-*, m-*), and color palette (primary, secondary, light, dark). Avoid introducing new fonts; reuse Roboto and existing font-awesome icons.
+- Keep footprint minimal on non-chat pages; lazy-load heavy assets only when chat opens.
+- Accessible: keyboard navigation (Tab/Shift+Tab), ARIA roles for dialog and buttons, sufficient contrast.
+
+Floating chat entry point (all authenticated pages)
+- Placement: fixed bottom-right, offset: 20px from right and bottom on desktop; 16px on mobile.
+- Size: 56x56px circle on desktop, 52x52px on mobile; .btn .btn-primary .rounded-circle .shadow.
+- Icon: Font Awesome comment icon (e.g., fa-comments) with badge for unread (position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger).
+- Z-index: above nav but below modals (e.g., 1050 < z < modal z).
+- Hover/focus: elevate shadow (shadow-lg) and show tooltip “Chat with support”.
+- States: hidden for guests; visible for authenticated users with CSS class hook (e.g., .chat-visible-auth).
+
+Chat panel (user side)
+- Container: fixed bottom-right, width: 360px desktop, 100% width on mobile (max-width: 420px); .card .shadow .rounded.
+- Header: .card-header d-flex align-items-center justify-content-between
+  - Left: title “Support” with small status dot (online/offline) using .badge bg-success/bg-secondary
+  - Right: buttons: minimize (fa-minus), close (fa-times). Buttons: .btn .btn-sm .btn-light .rounded-circle
+- Body: .card-body p-0; inside, vertical stack:
+  - Messages scroll area: max-height 55vh (desktop) / 70vh (mobile); overflow-auto; background: .bg-light subtle; message list virtualizable.
+  - Composer: border-top; .input-group with textarea (.form-control, rows=1 auto-expands to 4) + send button (.btn .btn-primary). Attach icon optional later.
+- Message bubbles:
+  - User message: align-right (.ms-auto), .bg-primary .text-white, .rounded-3 with right-corner accent; time stamp .small .text-light
+  - Admin message: align-left (.me-auto), .bg-white .border, .rounded-3; time stamp .small .text-muted
+  - Spacing: .mb-2 per bubble; group consecutive messages from same sender with reduced spacing
+- System/meta rows: date dividers (.text-center .text-muted .small) and typing indicator (three-dot animated using CSS from existing spinner util if available)
+- Unread badge: sticky at bottom of message list when scrolled up (e.g., “3 new messages”) .badge .bg-primary .shadow; click scrolls to bottom
+- Empty state: illustration optional later; for now show .text-muted “Ask us anything. We reply quickly.”
+
+Minimized state
+- When minimized, only the floating button remains with unread badge. Maintain session state across pages using localStorage/sessionStorage (no backend change needed in Phase 1 design).
+
+Admin/staff inbox (web UI spec)
+- Entry: reuse existing admin dashboard layout (sidebar + content) if present; otherwise create page under /admin/chat/
+- Header toolbar: title “Inbox”, quick filters as .btn .btn-outline-secondary (All, Unread, Open, Assigned to me), search .form-control with .input-group
+- Layout: responsive two-pane
+  - Left pane (conversation list): .list-group, width 320px desktop; items show avatar/initials, customer name, last message snippet, time, unread .badge .bg-danger, status chip (open/closed)
+  - Right pane (conversation view): .card fills remaining width; header shows participant, assignment dropdown (.dropdown .btn-sm), status toggle (.form-switch for open/closed)
+  - Messages and composer mirror the user chat styling, with admin theme (light background)
+- Bulk actions: select conversations via checkboxes (optional later), mark read, assign to staff
+- Empty states: helpful prompts when no conversations match filter
+
+Responsive behavior
+- ≤576px: chat panel full width and max-height 80vh; header remains sticky; composer fixed to bottom of panel
+- 577–992px: panel width 75% of viewport max 420px
+- ≥993px: panel width 360–420px
+
+Assets and icons
+- Use existing Font Awesome from project. Icons: comments (launch), paper-plane (send), minus (minimize), times (close), circle (status), search (search).
+
+Animations and transitions
+- Open/close: fade + slide-up (CSS transition 150–200ms) consistent with current UI animations
+- Typing indicator: subtle opacity pulse if no existing utility, otherwise reuse .spinner-grow .spinner-border small
+
+Copy and microtext
+- Header title: “Support”
+- Placeholder: “Type your message…”
+- Empty: “Ask us anything. We reply quickly.”
+- Unread badge: “new” count only
+
+States and error handling (design only)
+- Sending: dim bubble until confirmed; show clock icon if pending
+- Failed: red edge and retry icon; tooltip “Tap to retry”
+- Offline: banner in composer area “You’re offline. Messages will send when you’re back.”
+
+Technical notes for implementers (still Phase 1 design)
+- Render widget container once globally for authenticated sessions (e.g., in base template or root React component). Defer JS bundle until interaction.
+- Provide CSS variables/tokens hooks to match ui.css palette without duplicating colors.
+- Ensure no overlap with cookie consent or other fixed UI; adjust offsets if needed.
