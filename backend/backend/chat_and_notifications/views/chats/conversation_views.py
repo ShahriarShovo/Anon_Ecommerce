@@ -136,6 +136,22 @@ class ConversationInboxView(viewsets.ReadOnlyModelViewSet):
     serializer_class = ConversationListSerializer
     permission_classes = [IsAuthenticated]
     
+    @action(detail=False, methods=['get'])
+    def unread_count(self, request):
+        """Get total unread chat count for admin inbox"""
+        user = request.user
+        
+        if not (user.is_staff or user.is_superuser):
+            return Response({'error': 'Access denied'}, status=status.HTTP_403_FORBIDDEN)
+        
+        # Get all conversations with unread staff count
+        conversations = Conversation.objects.all()
+        total_unread = sum(conv.unread_staff_count for conv in conversations)
+        
+        print(f"Inbox unread count API - User: {user.email}, Total unread: {total_unread}")
+        
+        return Response({'unread_count': total_unread})
+    
     def get_queryset(self):
         """Filter conversations for inbox"""
         user = self.request.user
@@ -197,3 +213,67 @@ class ConversationInboxView(viewsets.ReadOnlyModelViewSet):
         }
         
         return Response(stats)
+    
+    @action(detail=False, methods=['get'])
+    def admin_status(self, request):
+        """Check if any admin/staff is online - Real-time session-based detection"""
+        from django.contrib.auth import get_user_model
+        from django.utils import timezone
+        from django.contrib.sessions.models import Session
+        from datetime import timedelta
+        
+        User = get_user_model()
+        
+        # Check for staff users who logged in within last 1 minute (very recent)
+        one_minute_ago = timezone.now() - timedelta(minutes=1)
+        
+        # First check: Look for staff users with very recent login
+        recent_staff = User.objects.filter(
+            Q(is_staff=True) | Q(is_superuser=True),
+            is_active=True,
+            last_login__gte=one_minute_ago
+        )
+        
+        online_staff = recent_staff.exists()
+        
+        print(f"Admin status check - Time: {timezone.now()}")
+        print(f"Admin status check - One minute ago: {one_minute_ago}")
+        print(f"Admin status check - Recent staff count: {recent_staff.count()}")
+        
+        for staff in recent_staff:
+            print(f"Recent staff: {staff.email}, last_login: {staff.last_login}")
+            print(f"Time difference: {timezone.now() - staff.last_login}")
+        
+        # If no recent login, check active sessions but be very strict
+        if not online_staff:
+            active_sessions = Session.objects.filter(expire_date__gte=timezone.now())
+            print(f"Admin status check - Active sessions count: {active_sessions.count()}")
+            
+            # Only check sessions that are very recent (created within last 2 minutes)
+            two_minutes_ago = timezone.now() - timedelta(minutes=2)
+            
+            for session in active_sessions:
+                try:
+                    # Check if session was created recently
+                    session_created_time = session.expire_date - timedelta(weeks=2)  # Approximate creation time
+                    if session_created_time < two_minutes_ago:
+                        continue  # Skip old sessions
+                    
+                    session_data = session.get_decoded()
+                    user_id = session_data.get('_auth_user_id')
+                    if user_id:
+                        user = User.objects.get(id=user_id)
+                        if (user.is_staff or user.is_superuser) and user.is_active:
+                            print(f"Found recent staff session for: {user.email}")
+                            online_staff = True
+                            break
+                except Exception as e:
+                    print(f"Session decode error: {e}")
+                    continue
+        
+        print(f"Admin status check - Final result: Online staff: {online_staff}")
+        
+        return Response({
+            'is_online': online_staff,
+            'status': 'online' if online_staff else 'offline'
+        })
