@@ -90,6 +90,45 @@ class Discount(models.Model):
         help_text="Custom message to show in notifications"
     )
     
+    # Display options
+    DISPLAY_TYPES = [
+        ('modal', 'Modal Popup'),
+        ('image', 'Image Banner'),
+        ('both', 'Both Modal and Image'),
+    ]
+    
+    display_type = models.CharField(
+        max_length=10, 
+        choices=DISPLAY_TYPES, 
+        default='modal',
+        help_text="How to display the discount notification"
+    )
+    
+    # Image settings
+    discount_image = models.ImageField(
+        upload_to='discounts/images/', 
+        blank=True, 
+        null=True,
+        help_text="Discount banner image"
+    )
+    image_alt_text = models.CharField(
+        max_length=200, 
+        blank=True,
+        help_text="Alt text for discount image"
+    )
+    
+    # Modal settings
+    modal_title = models.CharField(
+        max_length=200, 
+        blank=True,
+        help_text="Modal title (if different from name)"
+    )
+    modal_button_text = models.CharField(
+        max_length=50, 
+        default='Shop Now',
+        help_text="Button text in modal"
+    )
+    
     class Meta:
         ordering = ['-created_at']
         verbose_name = 'Discount'

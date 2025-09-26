@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'invoice',
     'analytics',
     'chat_and_notifications',
+    'settings',
     'rest_framework', 
     'drf_yasg',
     'corsheaders',

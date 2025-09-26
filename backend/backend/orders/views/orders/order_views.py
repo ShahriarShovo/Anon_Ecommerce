@@ -25,16 +25,32 @@ def create_order(request):
     
     try:
         with transaction.atomic():
-            # Get user's cart
+            # Get user's cart (handle multiple carts)
             try:
-                cart = Cart.objects.get(user=request.user)
+                # Get the most recent cart if multiple exist
+                cart = Cart.objects.filter(user=request.user).order_by('-created_at').first()
+                if not cart:
+                    print(f"🛒 No cart found for user: {request.user.email}")
+                    return Response({
+                        'success': False,
+                        'message': 'No cart found for user'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
                 cart_items = CartItem.objects.filter(cart=cart)
                 print(f"🛒 Cart found: ID {cart.id}, Items: {cart_items.count()}")
-            except Cart.DoesNotExist:
-                print(f"🛒 No cart found for user: {request.user.email}")
+                
+                # Clean up any duplicate carts (keep only the most recent one)
+                duplicate_carts = Cart.objects.filter(user=request.user).exclude(id=cart.id)
+                if duplicate_carts.exists():
+                    print(f"🛒 Found {duplicate_carts.count()} duplicate carts, cleaning up...")
+                    duplicate_carts.delete()
+                    print(f"🛒 Cleaned up duplicate carts")
+                    
+            except Exception as e:
+                print(f"🛒 Error getting cart: {str(e)}")
                 return Response({
                     'success': False,
-                    'message': 'No cart found for user'
+                    'message': 'Error accessing cart'
                 }, status=status.HTTP_400_BAD_REQUEST)
             
             if not cart_items.exists():

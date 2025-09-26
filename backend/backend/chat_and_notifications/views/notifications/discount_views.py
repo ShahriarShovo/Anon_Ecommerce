@@ -225,6 +225,19 @@ class DiscountViewSet(viewsets.ModelViewSet):
             print(f"Discount API: - {discount.name} (status: {discount.status}, show_in_notifications: {discount.show_in_notifications}, valid_from: {discount.valid_from})")
         
         # Filter active discounts
+        print(f"Discount API: Current time: {now}")
+        print(f"Discount API: Timezone: {now.tzinfo}")
+        
+        # Check each condition separately
+        status_active = Discount.objects.filter(status='active')
+        print(f"Discount API: Status active count: {status_active.count()}")
+        
+        valid_from_ok = Discount.objects.filter(valid_from__lte=now)
+        print(f"Discount API: Valid from OK count: {valid_from_ok.count()}")
+        
+        show_notifications = Discount.objects.filter(show_in_notifications=True)
+        print(f"Discount API: Show notifications count: {show_notifications.count()}")
+        
         discounts = Discount.objects.filter(
             status='active',
             valid_from__lte=now,
@@ -235,7 +248,7 @@ class DiscountViewSet(viewsets.ModelViewSet):
         
         print(f"Discount API: Active discounts found: {discounts.count()}")
         for discount in discounts:
-            print(f"Discount API: - {discount.name} (status: {discount.status}, show_in_notifications: {discount.show_in_notifications})")
+            print(f"Discount API: - {discount.name} (status: {discount.status}, show_in_notifications: {discount.show_in_notifications}, display_type: {discount.display_type})")
         
         # Convert to notification format
         notifications = []
@@ -249,7 +262,12 @@ class DiscountViewSet(viewsets.ModelViewSet):
                 'is_active': True,
                 'priority': discount.percentage,
                 'created_at': discount.created_at,
-                'discount_id': discount.id
+                'discount_id': discount.id,
+                'display_type': discount.display_type,
+                'discount_image': discount.discount_image.url if discount.discount_image else None,
+                'image_alt_text': discount.image_alt_text,
+                'modal_title': discount.modal_title,
+                'modal_button_text': discount.modal_button_text
             })
         
         print(f"Discount API: Returning {len(notifications)} notifications")

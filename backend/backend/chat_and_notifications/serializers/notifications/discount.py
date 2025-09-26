@@ -24,7 +24,8 @@ class DiscountSerializer(serializers.ModelSerializer):
             'target_products', 'target_categories', 'usage_limit', 'usage_count',
             'created_by', 'created_by_name', 'created_by_email', 'created_at', 'updated_at',
             'show_in_notifications', 'notification_message', 'is_valid', 'target_products_count',
-            'target_categories_count', 'remaining_usage'
+            'target_categories_count', 'remaining_usage', 'display_type', 'discount_image',
+            'image_alt_text', 'modal_title', 'modal_button_text'
         ]
         read_only_fields = ['created_by', 'created_at', 'updated_at', 'usage_count']
     
@@ -46,13 +47,15 @@ class DiscountSerializer(serializers.ModelSerializer):
 class DiscountCreateSerializer(serializers.ModelSerializer):
     target_products = serializers.PrimaryKeyRelatedField(many=True, queryset=Product.objects.all(), required=False)
     target_categories = serializers.PrimaryKeyRelatedField(many=True, queryset=Category.objects.all(), required=False)
+    discount_image = serializers.ImageField(required=False, allow_null=True)
     
     class Meta:
         model = Discount
         fields = [
             'name', 'discount_type', 'percentage', 'minimum_amount', 'maximum_discount_amount',
             'minimum_quantity', 'valid_from', 'valid_until', 'target_products', 'target_categories',
-            'usage_limit', 'show_in_notifications', 'notification_message', 'status'
+            'usage_limit', 'show_in_notifications', 'notification_message', 'status', 'display_type',
+            'discount_image', 'image_alt_text', 'modal_title', 'modal_button_text'
         ]
     
     def validate(self, data):
