@@ -13,19 +13,19 @@ from .chats import (
     ParticipantUpdateSerializer,
     OnlineStatusSerializer
 )
-from .notifications.notification import (
-    NotificationSerializer,
-    NotificationCreateSerializer,
-    NotificationViewSerializer,
-    NotificationStatsSerializer
-)
-from .notifications.discount import (
-    DiscountSerializer,
-    DiscountCreateSerializer,
-    DiscountUsageSerializer,
-    DiscountCalculationSerializer,
-    DiscountStatsSerializer
-)
+# from .notifications.notification import (
+#     NotificationSerializer,
+#     NotificationCreateSerializer,
+#     NotificationViewSerializer,
+#     NotificationStatsSerializer
+# )
+# from .notifications.discount import (
+#     DiscountSerializer,
+#     DiscountCreateSerializer,
+#     DiscountUsageSerializer,
+#     DiscountCalculationSerializer,
+#     DiscountStatsSerializer
+# )
 
 __all__ = [
     'ConversationSerializer', 
@@ -41,13 +41,14 @@ __all__ = [
     'ParticipantCreateSerializer',
     'ParticipantUpdateSerializer',
     'OnlineStatusSerializer',
-    'NotificationSerializer',
-    'NotificationCreateSerializer',
-    'NotificationViewSerializer',
-    'NotificationStatsSerializer',
-    'DiscountSerializer',
-    'DiscountCreateSerializer',
-    'DiscountUsageSerializer',
-    'DiscountCalculationSerializer',
-    'DiscountStatsSerializer'
+    
+    # 'NotificationSerializer',
+    # 'NotificationCreateSerializer',
+    # 'NotificationViewSerializer',
+    # 'NotificationStatsSerializer',
+    # 'DiscountSerializer',
+    # 'DiscountCreateSerializer',
+    # 'DiscountUsageSerializer',
+    # 'DiscountCalculationSerializer',
+    # 'DiscountStatsSerializer'
 ]

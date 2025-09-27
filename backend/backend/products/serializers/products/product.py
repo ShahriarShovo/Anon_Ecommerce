@@ -10,7 +10,12 @@ class ProductImageSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'image_url']
     
     def get_image_url(self, obj):
-        return obj.image_url
+        if obj.image_url:
+            # Return full URL if it's a relative path
+            if obj.image_url.startswith('/'):
+                return f"http://127.0.0.1:8000{obj.image_url}"
+            return obj.image_url
+        return None
     
     def to_representation(self, instance):
         if instance is None:
@@ -81,6 +86,11 @@ class ProductListSerializer(serializers.ModelSerializer):
     is_variable = serializers.BooleanField(read_only=True)
     primary_image = serializers.SerializerMethodField()
     variant_count = serializers.SerializerMethodField()
+    display_price = serializers.SerializerMethodField()
+    display_old_price = serializers.SerializerMethodField()
+    default_variant_in_stock = serializers.SerializerMethodField()
+    default_variant = serializers.SerializerMethodField()
+    variants = serializers.SerializerMethodField()
     
     class Meta:
         model = Product
@@ -91,6 +101,8 @@ class ProductListSerializer(serializers.ModelSerializer):
             'option1_name', 'option2_name', 'option3_name',
             'min_price', 'max_price', 'total_inventory', 'is_in_stock', 'is_variable',
             'featured', 'tags', 'primary_image', 'variant_count',
+            'display_price', 'display_old_price', 'default_variant_in_stock',
+            'default_variant', 'variants',
             'created_at', 'updated_at', 'published_at'
         ]
         read_only_fields = ['id', 'slug', 'created_at', 'updated_at']
@@ -111,6 +123,31 @@ class ProductListSerializer(serializers.ModelSerializer):
     
     def get_variant_count(self, obj):
         return obj.variants.count()
+    
+    def get_display_price(self, obj):
+        """Get display price (default variant price for variable products)"""
+        return obj.get_display_price()
+    
+    def get_display_old_price(self, obj):
+        """Get display old price (default variant old price for variable products)"""
+        return obj.get_display_old_price()
+    
+    def get_default_variant_in_stock(self, obj):
+        """Check if default variant is in stock"""
+        return obj.is_default_variant_in_stock()
+    
+    def get_default_variant(self, obj):
+        """Get default variant for variable products"""
+        if obj.product_type == 'variable' and obj.default_variant:
+            return ProductVariantSerializer(obj.default_variant).data
+        return None
+    
+    def get_variants(self, obj):
+        """Get all variants for variable products"""
+        if obj.product_type == 'variable':
+            variants = obj.variants.filter(is_active=True)
+            return ProductVariantSerializer(variants, many=True).data
+        return []
 
 class ProductDetailSerializer(serializers.ModelSerializer):
     """Serializer for product detail view"""
@@ -123,6 +160,9 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     is_variable = serializers.BooleanField(read_only=True)
     images = ProductImageSerializer(many=True, read_only=True)
     variants = ProductVariantSerializer(many=True, read_only=True)
+    display_price = serializers.SerializerMethodField()
+    display_old_price = serializers.SerializerMethodField()
+    default_variant_in_stock = serializers.SerializerMethodField()
     
     class Meta:
         model = Product
@@ -134,14 +174,27 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             'track_quantity', 'quantity', 'allow_backorder', 'quantity_policy', 'weight',
             'weight_unit', 'requires_shipping', 'taxable', 'featured',
             'tags', 'min_price', 'max_price', 'total_inventory', 'is_in_stock',
-            'is_variable', 'images', 'variants', 'created_at', 'updated_at',
-            'published_at'
+            'is_variable', 'images', 'variants', 'display_price', 'display_old_price',
+            'default_variant_in_stock', 'created_at', 'updated_at', 'published_at'
         ]
         read_only_fields = ['id', 'slug', 'created_at', 'updated_at']
+    
+    def get_display_price(self, obj):
+        """Get display price (default variant price for variable products)"""
+        return obj.get_display_price()
+    
+    def get_display_old_price(self, obj):
+        """Get display old price (default variant old price for variable products)"""
+        return obj.get_display_old_price()
+    
+    def get_default_variant_in_stock(self, obj):
+        """Check if default variant is in stock"""
+        return obj.is_default_variant_in_stock()
 
 class ProductCreateUpdateSerializer(serializers.ModelSerializer):
     """Serializer for product create/update operations"""
     variants = serializers.ListField(required=False, write_only=True, allow_empty=True)
+    options = serializers.ListField(required=False, write_only=True, allow_empty=True)
     images = ProductImageSerializer(many=True, required=False, read_only=True)
     uploaded_images = serializers.ListField(
         child=serializers.ImageField(),
@@ -157,18 +210,16 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
             'option1_name', 'option2_name', 'option3_name',
             'track_quantity', 'quantity', 'allow_backorder',
             'quantity_policy', 'weight', 'weight_unit', 'requires_shipping',
-            'taxable', 'featured', 'tags', 'images', 'uploaded_images', 'variants'
+            'taxable', 'featured', 'tags', 'images', 'uploaded_images', 'variants', 'options'
         ]
     
     def validate_variants(self, value):
         """Validate variants data"""
-        print(f"Validating variants: {value}")
         if not isinstance(value, list):
             raise serializers.ValidationError("Variants must be a list")
         
         validated_variants = []
         for i, variant_data in enumerate(value):
-            print(f"Validating variant {i}: {variant_data}")
             if not isinstance(variant_data, dict):
                 raise serializers.ValidationError(f"Variant {i} must be a dictionary")
             
@@ -206,12 +257,10 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
             # Validate dynamic_options if present
             if 'dynamic_options' in variant_data:
                 dynamic_options = variant_data['dynamic_options']
-                print(f"Validating dynamic_options for variant {i}: {dynamic_options}")
                 if not isinstance(dynamic_options, list):
                     raise serializers.ValidationError(f"Variant {i} dynamic_options must be a list")
                 
                 for j, option in enumerate(dynamic_options):
-                    print(f"Validating option {j}: {option}")
                     if not isinstance(option, dict):
                         raise serializers.ValidationError(f"Variant {i} dynamic_options[{j}] must be a dictionary")
                     
@@ -231,30 +280,39 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
             
             validated_variants.append(variant_data)
         
-        print(f"Validation completed. Validated variants: {validated_variants}")
         return validated_variants
+    
+    def validate_options(self, value):
+        """Validate options data"""
+        if not isinstance(value, list):
+            raise serializers.ValidationError("Options must be a list")
+        
+        validated_options = []
+        for i, option_data in enumerate(value):
+            if not isinstance(option_data, dict):
+                raise serializers.ValidationError(f"Option {i} must be a dictionary")
+            
+            # Validate required fields
+            if 'name' not in option_data or not option_data['name']:
+                raise serializers.ValidationError(f"Option {i} must have a name")
+            
+            if 'position' not in option_data:
+                option_data['position'] = i + 1
+            else:
+                try:
+                    option_data['position'] = int(option_data['position'])
+                except (ValueError, TypeError):
+                    option_data['position'] = i + 1
+            
+            validated_options.append(option_data)
+        
+        return validated_options
 
     def create(self, validated_data):
-        print(f"Validated data keys: {list(validated_data.keys())}")
-        print(f"Validated data: {validated_data}")
-        
-        # Debug variants data
-        variants_data = validated_data.get('variants', [])
-        print(f"Variants data in create: {variants_data}")
-        for i, variant in enumerate(variants_data):
-            print(f"Variant {i}: {variant}")
-            if 'dynamic_options' in variant:
-                print(f"Variant {i} dynamic_options: {variant['dynamic_options']}")
-        
         uploaded_images = validated_data.pop('uploaded_images', [])
         variants_data = validated_data.pop('variants', [])
+        options_data = validated_data.pop('options', [])
         images_data = validated_data.pop('images', [])
-        
-        # Variants data should now be in validated_data from FormData parsing
-        print(f"Variants data from validated_data: {variants_data}")
-        
-        print(f"Variants data: {variants_data}")
-        print(f"Uploaded images: {uploaded_images}")
         
         try:
             product = Product.objects.create(**validated_data)
@@ -272,11 +330,31 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
             for image_data in images_data:
                 ProductImage.objects.create(product=product, **image_data)
             
+            # Process options data
+            if options_data:
+                for i, option in enumerate(options_data):
+                    # Set option names to product fields
+                    if i == 0:
+                        product.option1_name = option['name']
+                    elif i == 1:
+                        product.option2_name = option['name']
+                    elif i == 2:
+                        product.option3_name = option['name']
+                product.save()
+            
+            # Set default variant for variable products
+            if product.product_type == 'variable' and variants_data:
+                # Set first variant as default
+                if variants_data:
+                    # Find the created variant and set as default
+                    created_variants = product.variants.all()
+                    if created_variants.exists():
+                        default_variant = created_variants.first()
+                        product.set_default_variant(default_variant)
+            
             # Create variants with dynamic options
             for variant_data in variants_data:
-                print(f"Creating variant with data: {variant_data}")
                 dynamic_options_data = variant_data.pop('dynamic_options', [])
-                print(f"Dynamic options data: {dynamic_options_data}")
                 
                 try:
                     # Remove any None or empty string values for optional fields
@@ -286,16 +364,11 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
                             cleaned_variant_data[key] = value
                     
                     variant = ProductVariant.objects.create(product=product, **cleaned_variant_data)
-                    print(f"Variant created successfully: {variant}")
                     
                     # Create dynamic options
                     if dynamic_options_data:
                         variant.set_dynamic_options(dynamic_options_data)
-                        print(f"Dynamic options set successfully")
                 except Exception as e:
-                    print(f"Error creating variant: {e}")
-                    print(f"Variant data: {variant_data}")
-                    print(f"Cleaned variant data: {cleaned_variant_data}")
                     # Delete the product if variant creation fails
                     product.delete()
                     raise serializers.ValidationError(f"Error creating variant: {str(e)}")
@@ -303,16 +376,12 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
             return product
             
         except Exception as e:
-            print(f"Error creating product: {e}")
-            import traceback
-            traceback.print_exc()
             raise serializers.ValidationError(f"Error creating product: {str(e)}")
     
     def is_valid(self, raise_exception=False):
         """Override is_valid to add more debugging"""
         is_valid = super().is_valid(raise_exception=False)
         if not is_valid:
-            print(f"Serializer validation errors: {self.errors}")
             if raise_exception:
                 raise serializers.ValidationError(self.errors)
         return is_valid

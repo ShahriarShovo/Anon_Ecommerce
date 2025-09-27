@@ -32,13 +32,8 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         """Custom create method to handle FormData with variants"""
-        print(f"Content-Type: {request.content_type}")
-        print(f"Request data keys: {list(request.data.keys())}")
-        print(f"Request data type: {type(request.data)}")
-        
         # Check if we have variant data in FormData
         has_variants = any(key.startswith('variants[') for key in request.data.keys())
-        print(f"Has variant keys: {has_variants}")
         
         # Parse FormData manually for variants
         if request.content_type and 'multipart/form-data' in request.content_type and has_variants:
@@ -48,20 +43,14 @@ class ProductViewSet(viewsets.ModelViewSet):
             
             while True:
                 variant_key = f'variants[{variant_index}][title]'
-                print(f"Looking for variant key: {variant_key}")
-                print(f"Available keys: {[k for k in request.data.keys() if k.startswith(f'variants[{variant_index}]')]}")
                 if variant_key not in request.data:
-                    print(f"Variant key {variant_key} not found, breaking")
                     break
                 
                 variant_data = {}
-                print(f"Processing variant {variant_index}")
-                
                 # Extract basic variant fields with proper data handling
                 for key, value in request.data.items():
                     if key.startswith(f'variants[{variant_index}]') and not key.startswith(f'variants[{variant_index}][dynamic_options]'):
                         field_name = key.split(']')[1][1:]  # Remove 'variants[index][' and ']'
-                        print(f"Processing field: {field_name} = {value}")
                         
                         # Skip problematic fields
                         if field_name not in ['options']:
@@ -106,17 +95,27 @@ class ProductViewSet(viewsets.ModelViewSet):
                     
                     # Get actual values properly
                     name_data = request.data.get(option_name_key, [''])
-                    name_value = name_data[0] if name_data and len(name_data) > 0 else ''
-                    print(f"Option name key: {option_name_key}, Raw data: {name_data}, Parsed value: '{name_value}'")
+                    # Fix: Handle both string and list cases
+                    if isinstance(name_data, list):
+                        name_value = name_data[0] if name_data and len(name_data) > 0 else ''
+                    else:
+                        name_value = str(name_data) if name_data else ''
                     
                     value_key = f'variants[{variant_index}][dynamic_options][{option_index}][value]'
                     value_data = request.data.get(value_key, [''])
-                    value_value = value_data[0] if value_data and len(value_data) > 0 else ''
-                    print(f"Option value key: {value_key}, Raw data: {value_data}, Parsed value: '{value_value}'")
+                    # Fix: Handle both string and list cases
+                    if isinstance(value_data, list):
+                        value_value = value_data[0] if value_data and len(value_data) > 0 else ''
+                    else:
+                        value_value = str(value_data) if value_data else ''
                     
                     position_key = f'variants[{variant_index}][dynamic_options][{option_index}][position]'
                     position_data = request.data.get(position_key, [option_index + 1])
-                    position_value = position_data[0] if position_data and len(position_data) > 0 else option_index + 1
+                    # Fix: Handle both string and list cases
+                    if isinstance(position_data, list):
+                        position_value = position_data[0] if position_data and len(position_data) > 0 else option_index + 1
+                    else:
+                        position_value = int(position_data) if position_data else option_index + 1
                     
                     option_data = {
                         'name': str(name_value),
@@ -134,7 +133,6 @@ class ProductViewSet(viewsets.ModelViewSet):
             
             # Add variants to request data
             if variants_data:
-                print(f"Adding variants_data to request: {variants_data}")
                 # Create a mutable copy of request.data
                 from django.http import QueryDict
                 mutable_data = QueryDict('', mutable=True)
@@ -153,17 +151,52 @@ class ProductViewSet(viewsets.ModelViewSet):
                 # Store mutable data for serializer to use
                 request._mutable_data = mutable_data
                 
-                print(f"Successfully added variants to mutable request.data")
-            else:
-                print("No variants_data found")
         
-        # Debug: Check what data is being passed to serializer
-        print(f"Final request.data before serializer: {dict(request.data)}")
-        print(f"Variants in request.data: {request.data.get('variants', 'NOT_FOUND')}")
+        
+        # Check for Product Options
+        options_keys = [key for key in request.data.keys() if key.startswith('options[')]
+        
+        # Check if we have options data
+        has_options = any(key.startswith('options[') for key in request.data.keys())
+        
+        if has_options:
+            options_data = []
+            option_index = 0
+            
+            while True:
+                option_name_key = f'options[{option_index}][name]'
+                option_position_key = f'options[{option_index}][position]'
+                
+                if option_name_key not in request.data:
+                    break
+                
+                name_data = request.data.get(option_name_key, [''])
+                # Fix: Handle both string and list cases
+                if isinstance(name_data, list):
+                    name_value = name_data[0] if name_data and len(name_data) > 0 else ''
+                else:
+                    name_value = str(name_data) if name_data else ''
+                
+                position_data = request.data.get(option_position_key, [option_index + 1])
+                # Fix: Handle both string and list cases
+                if isinstance(position_data, list):
+                    position_value = position_data[0] if position_data and len(position_data) > 0 else option_index + 1
+                else:
+                    position_value = int(position_data) if position_data else option_index + 1
+                
+                option_data = {
+                    'name': str(name_value),
+                    'position': int(position_value) if position_value else option_index + 1
+                }
+                options_data.append(option_data)
+                option_index += 1
+            
+            # Store options data for serializer
+            if options_data:
+                request._options_data = options_data
         
         # Use custom data if available
         if hasattr(request, '_mutable_data') and hasattr(request, '_variants_data'):
-            print(f"Using custom mutable data with variants: {request._variants_data}")
             
             # Convert QueryDict to regular dict and add variants
             serializer_data = {}
@@ -175,31 +208,23 @@ class ProductViewSet(viewsets.ModelViewSet):
             # Add the parsed variants data
             serializer_data['variants'] = request._variants_data
             
+            # 🔍 DEBUG: Add options data if available
+            if hasattr(request, '_options_data'):
+                serializer_data['options'] = request._options_data
+            
             # Handle uploaded_images properly - only include actual files
             uploaded_images = []
-            print(f"Processing uploaded_images from request._mutable_data")
-            for key, value in request._mutable_data.items():
-                print(f"Key: {key}, Value type: {type(value)}, Has read method: {hasattr(value, 'read') if value else 'N/A'}")
-                if key == 'uploaded_images' and hasattr(value, 'read'):  # It's a file
-                    uploaded_images.append(value)
-                    print(f"Added file: {value}")
             
-            # Also check request.FILES for uploaded_images
-            print(f"Request.FILES: {request.FILES}")
-            for key, value in request.FILES.items():
-                if key == 'uploaded_images':
-                    uploaded_images.append(value)
-                    print(f"Added file from FILES: {value}")
+            # Use request.FILES directly to avoid duplicates
+            if 'uploaded_images' in request.FILES:
+                files = request.FILES.getlist('uploaded_images')
+                for i, file in enumerate(files):
+                    uploaded_images.append(file)
             
             serializer_data['uploaded_images'] = uploaded_images
-            print(f"Final uploaded_images: {uploaded_images}")
-            
-            print(f"Serializer data structure: {serializer_data}")
             
             serializer = self.get_serializer(data=serializer_data)
-            print(f"Serializer data before validation: {serializer_data}")
             if not serializer.is_valid():
-                print(f"Serializer validation errors: {serializer.errors}")
                 # Return only the first few errors to avoid huge response
                 error_summary = {}
                 for field, errors in serializer.errors.items():
@@ -215,10 +240,6 @@ class ProductViewSet(viewsets.ModelViewSet):
         try:
             return super().create(request, *args, **kwargs)
         except Exception as e:
-            print(f"Error in create method: {e}")
-            print(f"Error type: {type(e)}")
-            import traceback
-            traceback.print_exc()
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     def get_queryset(self):

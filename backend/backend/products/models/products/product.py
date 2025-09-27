@@ -107,6 +107,24 @@ class Product(models.Model):
     featured = models.BooleanField(default=False, help_text="Feature this product")
     tags = models.TextField(blank=True, null=True, help_text="Product tags (comma-separated)")
     
+    # Default Variant (for variable products)
+    default_variant = models.ForeignKey(
+        'ProductVariant', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='default_for_product',
+        help_text="Default variant for variable products"
+    )
+    default_price = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        null=True, 
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.00'))],
+        help_text="Default variant price (cached for performance)"
+    )
+    
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -170,3 +188,52 @@ class Product(models.Model):
         if primary:
             return primary
         return self.images.first()
+    
+    def set_default_variant(self, variant=None):
+        """Set default variant for variable products"""
+        if self.product_type != 'variable':
+            return False
+        
+        if variant is None:
+            # Set first active variant as default
+            variant = self.variants.filter(is_active=True).first()
+        
+        if variant and variant.product == self:
+            self.default_variant = variant
+            self.default_price = variant.price
+            self.save(update_fields=['default_variant', 'default_price'])
+            return True
+        return False
+    
+    def get_display_price(self):
+        """Get display price for product (default variant price for variable products)"""
+        if self.product_type == 'variable':
+            if self.default_variant and self.default_price:
+                return self.default_price
+            # Fallback: get first variant price if default not set
+            first_variant = self.variants.filter(is_active=True).first()
+            if first_variant:
+                return first_variant.price
+        return self.price
+    
+    def get_display_old_price(self):
+        """Get display old price for product (default variant old price for variable products)"""
+        if self.product_type == 'variable':
+            if self.default_variant:
+                return self.default_variant.old_price
+            # Fallback: get first variant old price if default not set
+            first_variant = self.variants.filter(is_active=True).first()
+            if first_variant:
+                return first_variant.old_price
+        return self.old_price
+    
+    def is_default_variant_in_stock(self):
+        """Check if default variant is in stock"""
+        if self.product_type == 'variable':
+            if self.default_variant:
+                return self.default_variant.quantity > 0
+            # Fallback: check first variant stock if default not set
+            first_variant = self.variants.filter(is_active=True).first()
+            if first_variant:
+                return first_variant.quantity > 0
+        return self.is_in_stock
