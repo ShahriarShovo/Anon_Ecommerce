@@ -68,7 +68,7 @@ def get_product_reviews(request, slug):
 @permission_classes([IsAuthenticated])  # Only authenticated users can create reviews
 def create_product_review(request, slug):
     """
-    Create a new product review
+    Create a new product review with purchase verification
     """
     try:
         # Get product
@@ -84,6 +84,22 @@ def create_product_review(request, slug):
                 'success': False,
                 'error': 'You have already reviewed this product'
             }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # VERIFY PURCHASE: Check if user has purchased this product
+        from orders.models import Order, OrderItem
+        
+        # Check if user has delivered orders containing this product
+        has_purchased = Order.objects.filter(
+            user=user,
+            status='delivered',  # Only delivered orders count
+            items__product=product
+        ).exists()
+        
+        if not has_purchased:
+            return Response({
+                'success': False,
+                'error': 'You can only review products you have purchased and received. Please complete a purchase first.'
+            }, status=status.HTTP_403_FORBIDDEN)
         
         # Get review data
         rating = request.data.get('rating')
@@ -104,7 +120,7 @@ def create_product_review(request, slug):
                 'error': 'Comment is required'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # Create review
+        # Create review with verified purchase
         review = ProductReview.objects.create(
             product=product,
             user=user,  # Use authenticated user
@@ -114,7 +130,7 @@ def create_product_review(request, slug):
             user_name=user.email,  # Use user email as display name
             user_email=user.email,
             is_approved=True,  # Auto-approve for authenticated users
-            is_verified_purchase=True  # Mark as verified for authenticated users
+            is_verified_purchase=True  # Mark as verified purchase
         )
         
         return Response({

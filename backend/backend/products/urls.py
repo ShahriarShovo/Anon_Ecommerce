@@ -6,6 +6,7 @@ from .views import CategoryViewSet, SubCategoryViewSet, ProductViewSet
 from .views.products.homepage import homepage_products
 from .views.products.get_single_product import get_single_product
 from .views.products.product_reviews import get_product_reviews, create_product_review
+from .views.products.purchase_verification import check_purchase_eligibility, get_user_purchase_history
 from .views.search.search import SearchViewSet
 from .views.filters.price_filter import PriceFilterViewSet
 from .views.pagination.home_pagination import HomePaginationViewSet
@@ -31,4 +32,7 @@ urlpatterns = [
     # Product Reviews API
     path('product-reviews/<slug:slug>/', get_product_reviews, name='product-reviews'),
     path('product-reviews/<slug:slug>/create/', create_product_review, name='create-review'),
+    # Purchase Verification API
+    path('purchase-verification/<slug:slug>/', check_purchase_eligibility, name='check-purchase-eligibility'),
+    path('purchase-history/<slug:slug>/', get_user_purchase_history, name='user-purchase-history'),
 ]
