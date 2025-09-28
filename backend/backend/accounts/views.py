@@ -15,6 +15,8 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from django.utils import timezone
+from datetime import timedelta
 
 # Create your views here.
 
@@ -51,11 +53,41 @@ class Signup_user(APIView):
         tags=['Authentication']
     )
     def post(self, request, format=None):
+        print(f"🔍 DEBUG: Signup request data: {request.data}")
         serializer = UserRegistrationSerializers(data=request.data)
         if serializer.is_valid(raise_exception=True):
             user=serializer.save()
-            token = get_tokens_for_user(user)
-            return Response({'message':'Signup Successful', 'token':token}, status=status.HTTP_201_CREATED)
+            print(f"🔍 DEBUG: User created: {user.email}")
+            
+            # Generate email verification token
+            from accounts.email_verification_service import EmailVerificationService
+            verification_token = EmailVerificationService.generate_verification_token()
+            print(f"🔍 DEBUG: Generated token: {verification_token}")
+            
+            user.email_verification_token = verification_token
+            user.email_verification_sent_at = timezone.now()
+            user.is_email_verified = False  # Set to False initially
+            user.save()
+            print(f"🔍 DEBUG: User saved with token: {user.email_verification_token}")
+            print(f"🔍 DEBUG: User verification status: {user.is_email_verified}")
+            
+            # Send verification email
+            email_sent = EmailVerificationService.send_verification_email(request, user, verification_token)
+            print(f"🔍 DEBUG: Email sent result: {email_sent}")
+            
+            if email_sent:
+                return Response({
+                    'message': 'Signup Successful! Please check your email to verify your account.',
+                    'email_verification_sent': True,
+                    'email': user.email
+                }, status=status.HTTP_201_CREATED)
+            else:
+                return Response({
+                    'message': 'Signup Successful! However, verification email could not be sent. Please contact support.',
+                    'email_verification_sent': False,
+                    'email': user.email
+                }, status=status.HTTP_201_CREATED)
+                
         return Response({'message':'Signup Failed'}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -88,6 +120,14 @@ class User_login(APIView):
             password=form.data.get('password')
             user=authenticate(email=email, password=password)
             if user is not None:
+                # Check if email is verified
+                if not user.is_email_verified:
+                    return Response({
+                        'message': 'Please verify your email address before logging in. Check your email for verification link.',
+                        'email_verification_required': True,
+                        'email': user.email
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
                 token=get_tokens_for_user(user)
                 
                 # Determine user type
@@ -99,7 +139,8 @@ class User_login(APIView):
                     'user_type': user_type,
                     'is_admin': user.is_staff or user.is_superuser,
                     'is_superuser': user.is_superuser,
-                    'is_staff': user.is_staff
+                    'is_staff': user.is_staff,
+                    'email_verified': user.is_email_verified
                 }, status=status.HTTP_200_OK)
             else:
                 return Response({'message':'User no Found'}, status=status.HTTP_404_NOT_FOUND)
@@ -295,6 +336,198 @@ def admin_statistics(request):
             'success': False,
             'message': f'Failed to fetch statistics: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class EmailVerificationView(APIView):
+    """
+    Email verification endpoint
+    """
+    @swagger_auto_schema(
+        operation_description="Verify user email with token",
+        responses={
+            200: openapi.Response(
+                description="Email verified successfully",
+                examples={
+                    "application/json": {
+                        "message": "Email verified successfully!",
+                        "verified": True
+                    }
+                }
+            ),
+            400: openapi.Response(description="Invalid or expired token"),
+            404: openapi.Response(description="User not found")
+        },
+        tags=['Authentication']
+    )
+    def get(self, request, token):
+        """
+        Verify email with token
+        """
+        try:
+            print(f"🔍 DEBUG: Email verification request for token: {token}")
+            
+            # Find user by verification token (check both verified and unverified)
+            user = User.objects.filter(email_verification_token=token).first()
+            print(f"🔍 DEBUG: User found: {user}")
+            
+            if user:
+                print(f"🔍 DEBUG: User email: {user.email}")
+                print(f"🔍 DEBUG: User verification status: {user.is_email_verified}")
+                print(f"🔍 DEBUG: Token sent at: {user.email_verification_sent_at}")
+                
+                # Check if user is already verified
+                if user.is_email_verified:
+                    print(f"🔍 DEBUG: User is already verified")
+                    return Response({
+                        'message': 'Email is already verified! You can now log in to your account.',
+                        'verified': True,
+                        'email': user.email,
+                        'already_verified': True
+                    }, status=status.HTTP_200_OK)
+            
+            if not user:
+                print(f"🔍 DEBUG: No user found with token: {token}")
+                return Response({
+                    'message': 'Invalid or expired verification token',
+                    'verified': False
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Check if token is expired (24 hours)
+            if user.email_verification_sent_at:
+                token_age = timezone.now() - user.email_verification_sent_at
+                if token_age > timedelta(hours=24):
+                    return Response({
+                        'message': 'Verification token has expired. Please request a new verification email.',
+                        'verified': False
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Verify the email (handle race condition)
+            if not user.is_email_verified:
+                user.is_email_verified = True
+                user.save()
+                print(f"🔍 DEBUG: User {user.email} email verified successfully")
+                
+                # Clear token after successful verification (with delay to handle race conditions)
+                import threading
+                def clear_token_after_delay():
+                    import time
+                    time.sleep(5)  # Wait 5 seconds
+                    try:
+                        user.refresh_from_db()
+                        if user.is_email_verified:
+                            user.email_verification_token = None
+                            user.save()
+                            print(f"🔍 DEBUG: Token cleared for user {user.email}")
+                    except Exception as e:
+                        print(f"🔍 DEBUG: Error clearing token: {e}")
+                
+                # Run token cleanup in background
+                threading.Thread(target=clear_token_after_delay, daemon=True).start()
+                
+                return Response({
+                    'message': 'Email verified successfully! You can now log in to your account.',
+                    'verified': True,
+                    'email': user.email,
+                    'redirect_url': '/email-verified'
+                }, status=status.HTTP_200_OK)
+            else:
+                print(f"🔍 DEBUG: User {user.email} already verified")
+                return Response({
+                    'message': 'Email is already verified! You can now log in to your account.',
+                    'verified': True,
+                    'email': user.email,
+                    'already_verified': True
+                }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'message': f'Error verifying email: {str(e)}',
+                'verified': False
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ResendVerificationEmailView(APIView):
+    """
+    Resend verification email endpoint
+    """
+    @swagger_auto_schema(
+        operation_description="Resend verification email",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'email': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_EMAIL)
+            },
+            required=['email']
+        ),
+        responses={
+            200: openapi.Response(
+                description="Verification email sent successfully",
+                examples={
+                    "application/json": {
+                        "message": "Verification email sent successfully!",
+                        "email_sent": True
+                    }
+                }
+            ),
+            400: openapi.Response(description="User not found or already verified"),
+            500: openapi.Response(description="Failed to send email")
+        },
+        tags=['Authentication']
+    )
+    def post(self, request):
+        """
+        Resend verification email
+        """
+        try:
+            email = request.data.get('email')
+            if not email:
+                return Response({
+                    'message': 'Email is required',
+                    'email_sent': False
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Find user by email
+            user = User.objects.filter(email=email).first()
+            if not user:
+                return Response({
+                    'message': 'User not found',
+                    'email_sent': False
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Check if already verified
+            if user.is_email_verified:
+                return Response({
+                    'message': 'Email is already verified',
+                    'email_sent': False
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Generate new verification token
+            from accounts.email_verification_service import EmailVerificationService
+            verification_token = EmailVerificationService.generate_verification_token()
+            user.email_verification_token = verification_token
+            user.email_verification_sent_at = timezone.now()
+            user.save()
+            
+            # Send verification email
+            email_sent = EmailVerificationService.send_verification_email(request, user, verification_token)
+            
+            if email_sent:
+                return Response({
+                    'message': 'Verification email sent successfully!',
+                    'email_sent': True,
+                    'email': user.email
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({
+                    'message': 'Failed to send verification email. Please try again later.',
+                    'email_sent': False
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                
+        except Exception as e:
+            return Response({
+                'message': f'Error sending verification email: {str(e)}',
+                'email_sent': False
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 

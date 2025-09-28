@@ -14,4 +14,8 @@ urlpatterns = [
     path('users/<int:pk>/', views.UserDetailView.as_view()),  # User detail/update
     path('statistics/', views.admin_statistics),  # Admin dashboard statistics
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    
+    # Email verification URLs
+    path('verify-email/<str:token>/', views.EmailVerificationView.as_view(), name='verify-email'),
+    path('resend-verification/', views.ResendVerificationEmailView.as_view(), name='resend-verification'),
 ]

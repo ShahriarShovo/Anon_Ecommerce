@@ -29,8 +29,7 @@ class SessionCookieMiddleware(MiddlewareMixin):
                 samesite=settings.SESSION_COOKIE_SAMESITE
             )
             
-            # Debug: Log session cookie setting
-            print(f"🍪 Middleware: Setting session cookie: {request.session.session_key}")
+            # Set session cookie
         
         return response
 

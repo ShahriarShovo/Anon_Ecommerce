@@ -3,6 +3,9 @@ from django.utils import timezone
 from PIL import Image
 import os
 
+# Import email models
+from .email_model import EmailSettings, EmailTemplate, EmailLog
+
 
 class Logo(models.Model):
     """

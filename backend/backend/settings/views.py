@@ -32,23 +32,17 @@ class LogoViewSet(viewsets.ModelViewSet):
     def get_active_logo(self, request):
         """Get the currently active logo (public endpoint)"""
         try:
-            print(f"Logo API: Getting active logo...")
             active_logo = Logo.objects.filter(is_active=True).first()
-            print(f"Logo API: Active logo found: {active_logo}")
             
             if active_logo:
-                print(f"Logo API: Logo name: {active_logo.name}, URL: {active_logo.logo_url}")
                 serializer = ActiveLogoSerializer(active_logo)
-                print(f"Logo API: Serialized data: {serializer.data}")
                 return Response(serializer.data)
             else:
-                print("Logo API: No active logo found")
                 return Response({
                     'message': 'No active logo found',
                     'logo_url': None
                 }, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            print(f"Logo API: Error: {str(e)}")
             return Response({
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

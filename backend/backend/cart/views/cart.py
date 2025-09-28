@@ -444,9 +444,7 @@ def get_cart(request):
         # Get or create cart
         cart = get_or_create_cart(request)
         
-        # Debug: Log cart details
-        print(f"🛒 Backend: Get cart - Cart ID: {cart.id}, Session Key: {cart.session_key}, User: {cart.user}")
-        print(f"🛒 Backend: Get cart - Items count: {cart.items.count()}")
+        # Get cart details
         
         # Clear expired items
         expired_count = cart.clear_expired_items()

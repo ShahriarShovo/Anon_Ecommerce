@@ -66,10 +66,11 @@ class ProfileSerializer(serializers.ModelSerializer):
     is_superuser = serializers.BooleanField(source='user.is_superuser', read_only=True)
     id = serializers.IntegerField(source='user.id', read_only=True)
     email = serializers.EmailField(source='user.email', read_only=True)
+    email_verified = serializers.BooleanField(source='user.is_email_verified', read_only=True)
     
     class Meta:
         model = Profile
-        fields=['id', 'email', 'username', 'full_name', 'address', 'city', 'zipcode', 'country', 'phone', 'is_staff', 'is_superuser']
+        fields=['id', 'email', 'username', 'full_name', 'address', 'city', 'zipcode', 'country', 'phone', 'is_staff', 'is_superuser', 'email_verified']
 
 
 class UserListSerializer(serializers.ModelSerializer):
