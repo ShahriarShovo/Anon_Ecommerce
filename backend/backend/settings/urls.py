@@ -8,6 +8,11 @@ from .email_view import (
     send_test_email, bulk_update_email_settings, preview_email_template,
     get_active_email_settings, get_email_statistics
 )
+from .footer_settings_views import (
+    FooterSettingsListCreateView, FooterSettingsDetailView,
+    SocialMediaLinkListCreateView, SocialMediaLinkDetailView,
+    get_active_footer_settings, bulk_update_social_links
+)
 
 router = DefaultRouter()
 router.register(r'logos', LogoViewSet)
@@ -37,4 +42,12 @@ urlpatterns = [
     
     # Statistics URLs
     path('email-statistics/', get_email_statistics, name='email-statistics'),
+    
+    # Footer Settings URLs
+    path('footer-settings/', FooterSettingsListCreateView.as_view(), name='footer-settings-list'),
+    path('footer-settings/<int:pk>/', FooterSettingsDetailView.as_view(), name='footer-settings-detail'),
+    path('footer-settings/<int:footer_setting_id>/social-links/', SocialMediaLinkListCreateView.as_view(), name='social-links-list'),
+    path('footer-settings/<int:footer_setting_id>/social-links/<int:pk>/', SocialMediaLinkDetailView.as_view(), name='social-links-detail'),
+    path('footer-settings/<int:footer_setting_id>/social-links/bulk-update/', bulk_update_social_links, name='bulk-update-social-links'),
+    path('footer-settings/active/', get_active_footer_settings, name='get-active-footer-settings'),
 ]

@@ -1,5 +1,6 @@
 from django.contrib import admin
 from .email_model import EmailSettings, EmailTemplate, EmailLog
+from .footer_settings_model import FooterSettings, SocialMediaLink
 
 # Register your models here.
 
@@ -47,3 +48,45 @@ class EmailLogAdmin(admin.ModelAdmin):
     list_filter = ['status', 'sent_at', 'created_at']
     search_fields = ['to_email', 'from_email', 'subject']
     readonly_fields = ['created_at', 'sent_at', 'delivered_at']
+
+
+class SocialMediaLinkInline(admin.TabularInline):
+    model = SocialMediaLink
+    extra = 1
+    fields = ['platform', 'url', 'icon', 'is_active', 'order']
+
+
+@admin.register(FooterSettings)
+class FooterSettingsAdmin(admin.ModelAdmin):
+    list_display = ['email', 'phone', 'is_active', 'created_at']
+    list_filter = ['is_active', 'created_at']
+    search_fields = ['email', 'phone', 'description']
+    readonly_fields = ['created_at', 'updated_at']
+    inlines = [SocialMediaLinkInline]
+    fieldsets = (
+        ('Contact Information', {
+            'fields': ('email', 'phone')
+        }),
+        ('Content', {
+            'fields': ('description', 'about_us', 'copyright', 'mission', 'vision')
+        }),
+        ('Business Information', {
+            'fields': ('business_hours', 'quick_response')
+        }),
+        ('Status', {
+            'fields': ('is_active',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+
+
+@admin.register(SocialMediaLink)
+class SocialMediaLinkAdmin(admin.ModelAdmin):
+    list_display = ['platform', 'url', 'footer_setting', 'is_active', 'order', 'created_at']
+    list_filter = ['is_active', 'platform', 'created_at']
+    search_fields = ['platform', 'url', 'footer_setting__email']
+    readonly_fields = ['created_at', 'updated_at']
+    ordering = ['footer_setting', 'order', 'platform']

@@ -6,6 +6,9 @@ import os
 # Import email models
 from .email_model import EmailSettings, EmailTemplate, EmailLog
 
+# Import footer models
+from .footer_settings_model import FooterSettings, SocialMediaLink
+
 
 class Logo(models.Model):
     """
