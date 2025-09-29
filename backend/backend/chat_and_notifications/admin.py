@@ -1,5 +1,6 @@
 from django.contrib import admin
 from .models import Conversation, Message, Participant
+from .models.contact.contact import Contact
 
 @admin.register(Conversation)
 class ConversationAdmin(admin.ModelAdmin):
@@ -24,3 +25,25 @@ class ParticipantAdmin(admin.ModelAdmin):
     search_fields = ['user__email', 'conversation__id']
     readonly_fields = ['joined_at', 'last_seen_at']
     raw_id_fields = ['conversation', 'user']
+
+@admin.register(Contact)
+class ContactAdmin(admin.ModelAdmin):
+    list_display = ['id', 'name', 'email', 'subject', 'status', 'is_read', 'is_replied', 'created_at']
+    list_filter = ['is_read', 'is_replied', 'created_at']
+    search_fields = ['name', 'email', 'subject', 'message']
+    readonly_fields = ['created_at', 'updated_at']
+    list_editable = ['is_read', 'is_replied']
+    ordering = ['-created_at']
+    
+    fieldsets = (
+        ('Contact Information', {
+            'fields': ('name', 'email', 'subject', 'message')
+        }),
+        ('Status', {
+            'fields': ('is_read', 'is_replied')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
