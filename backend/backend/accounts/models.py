@@ -47,6 +47,10 @@ class User(AbstractBaseUser,PermissionsMixin):
     is_email_verified=models.BooleanField(default=False, help_text=gettext_lazy('Designates whether the user has verified their email address'))
     email_verification_token=models.CharField(max_length=100, blank=True, null=True, help_text=gettext_lazy('Token for email verification'))
     email_verification_sent_at=models.DateTimeField(null=True, blank=True, help_text=gettext_lazy('When the verification email was sent'))
+    
+    # Password reset fields
+    password_reset_token=models.CharField(max_length=100, blank=True, null=True, help_text=gettext_lazy('Token for password reset'))
+    password_reset_token_expires=models.DateTimeField(null=True, blank=True, help_text=gettext_lazy('When the password reset token expires'))
 
     USERNAME_FIELD='email'
     objects=MyUserManager()
