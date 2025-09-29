@@ -2,6 +2,7 @@ from django.urls import path
 from orders.views.orders.order_views import create_order, OrderListView, ActiveOrderListView, OrderDetailView, DeliveredOrderListView, CancelledRefundedOrderListView, update_order_status, cancel_order
 from orders.views.payments.payment_views import PaymentMethodListView, mark_cod_collected, PaymentDetailView
 from orders.views.orders.address_views import AddressListView, AddressDetailView, set_default_address, get_default_address
+from orders.views.tracking.order_tracking_views import OrderTrackingView, track_order_by_number, get_order_status, search_orders
 
 urlpatterns = [
     # Order URLs
@@ -24,4 +25,10 @@ urlpatterns = [
     path('addresses/<int:pk>/', AddressDetailView.as_view(), name='address_detail'),
     path('addresses/<int:address_id>/set-default/', set_default_address, name='set_default_address'),
     path('addresses/default/', get_default_address, name='get_default_address'),
+    
+    # Tracking URLs
+    path('tracking/<str:order_number>/', OrderTrackingView.as_view(), name='order_tracking'),
+    path('tracking/track/', track_order_by_number, name='track_order_by_number'),
+    path('tracking/<str:order_number>/status/', get_order_status, name='get_order_status'),
+    path('tracking/search/', search_orders, name='search_orders'),
 ]
