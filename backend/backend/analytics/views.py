@@ -419,20 +419,25 @@ def generate_excel_report(request):
         wb.save(output)
         output.seek(0)
         
+        # Get the file content
+        file_content = output.getvalue()
+        output.close()
+        
         # Create response
         filename = f"{report_type}_report_{start_date}_to_{end_date}.xlsx"
         response = HttpResponse(
-            output.getvalue(),
+            file_content,
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        response['Content-Length'] = len(file_content)
         
         return response
         
     except Exception as e:
         import traceback
-        # print(f"Excel Report Error: {str(e)}")
-        # print(f"Traceback: {traceback.format_exc()}")
+        print(f"Excel Report Error: {str(e)}")
+        print(f"Traceback: {traceback.format_exc()}")
         return Response({
             'success': False,
             'message': f'Failed to generate Excel report: {str(e)}'

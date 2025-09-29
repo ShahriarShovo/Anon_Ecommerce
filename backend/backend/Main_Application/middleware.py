@@ -14,6 +14,12 @@ class SessionCookieMiddleware(MiddlewareMixin):
     Middleware to ensure session cookies are properly set
     """
     
+    def process_request(self, request):
+        # Ensure session is created if it doesn't exist
+        if not request.session.session_key:
+            request.session.create()
+        return None
+    
     def process_response(self, request, response):
         # Add session cookie headers for cross-origin requests
         if hasattr(request, 'session') and request.session.session_key:
@@ -28,8 +34,6 @@ class SessionCookieMiddleware(MiddlewareMixin):
                 httponly=settings.SESSION_COOKIE_HTTPONLY,
                 samesite=settings.SESSION_COOKIE_SAMESITE
             )
-            
-            # Set session cookie
         
         return response
 
@@ -42,8 +46,16 @@ class CORSHeadersMiddleware(MiddlewareMixin):
     def process_response(self, request, response):
         # Add CORS headers for credentials
         response['Access-Control-Allow-Credentials'] = 'true'
-        response['Access-Control-Allow-Origin'] = request.META.get('HTTP_ORIGIN', '*')
+        origin = request.META.get('HTTP_ORIGIN')
+        if origin in ['http://localhost:3000', 'http://127.0.0.1:3000']:
+            response['Access-Control-Allow-Origin'] = origin
+        else:
+            response['Access-Control-Allow-Origin'] = '*'
         response['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
         response['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
+        
+        # Add session cookie headers
+        if hasattr(request, 'session') and request.session.session_key:
+            response['Access-Control-Expose-Headers'] = 'Set-Cookie'
         
         return response

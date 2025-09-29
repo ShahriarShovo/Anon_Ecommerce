@@ -259,6 +259,10 @@ class CartItem(models.Model):
         else:
             return f"{self.product.title} (x{self.quantity})"
     
+    def save(self, *args, **kwargs):
+        """Override save method"""
+        super().save(*args, **kwargs)
+    
     def get_current_price(self):
         """Get current price of the product/variant"""
         if self.variant:

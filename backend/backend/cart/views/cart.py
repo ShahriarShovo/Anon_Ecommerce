@@ -56,24 +56,14 @@ def get_or_create_cart(request):
             Cart.objects.filter(user=request.user, is_active=True).update(is_active=False)
             cart = Cart.objects.create(user=request.user, is_active=True)
     else:
-        # Guest user - get or create session cart
-        session_key = request.session.session_key
-        if not session_key:
-            request.session.create()
-            session_key = request.session.session_key
-        
-        try:
-            cart = Cart.objects.get(session_key=session_key, is_active=True)
-        except Cart.DoesNotExist:
-            # Deactivate any existing active carts for this session
-            Cart.objects.filter(session_key=session_key, is_active=True).update(is_active=False)
-            cart = Cart.objects.create(session_key=session_key, is_active=True)
+        # Guest users are not allowed to have carts
+        return None
     
     return cart
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])  # Allow both authenticated and guest users
+@permission_classes([IsAuthenticated])  # Only authenticated users can add to cart
 def add_to_cart(request):
     """
     Add Item to Cart API
@@ -98,10 +88,17 @@ def add_to_cart(request):
     }
     """
     try:
+        print(f"🔍 ADD_TO_CART: add_to_cart API called - User: {request.user}, Session: {request.session.session_key}")
+        print(f"🔍 ADD_TO_CART: Request data: {request.data}")
+        print(f"🔍 ADD_TO_CART: Stack trace:")
+        import traceback
+        traceback.print_stack()
+        
         # Validate request data
         # print(f"🛒 Backend: Add to cart request data: {request.data}")
         serializer = AddToCartSerializer(data=request.data)
         if not serializer.is_valid():
+            print(f"🔍 DEBUG: Validation failed: {serializer.errors}")
             # print(f"🛒 Backend: Validation failed: {serializer.errors}")
             return Response({
                 'success': False,
@@ -425,7 +422,7 @@ def decrease_cart_item_quantity(request, item_id):
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])  # Allow both authenticated and guest users
+@permission_classes([IsAuthenticated])  # Only authenticated users can view cart
 def get_cart(request):
     """
     Get Cart API
@@ -441,16 +438,43 @@ def get_cart(request):
     }
     """
     try:
+        print(f"🔍 GET_CART_API: get_cart API called - User: {request.user}, Session: {request.session.session_key}")
+        
         # Get or create cart
         cart = get_or_create_cart(request)
+        
+        if cart is None:
+            print(f"🔍 GET_CART_API: No cart found for guest user")
+            # Return empty cart for guest users
+            return Response({
+                'success': True,
+                'cart': {
+                    'id': None,
+                    'items': [],
+                    'total_items': 0,
+                    'subtotal': 0.00
+                }
+            }, status=status.HTTP_200_OK)
+        
+        print(f"🔍 GET_CART_API: Cart retrieved - ID: {cart.id}, Items: {cart.items.count()}")
+        
+        # Check if there are any items in cart
+        if cart.items.count() > 0:
+            print(f"🔍 GET_CART_API: WARNING - Cart has {cart.items.count()} items!")
+            for item in cart.items.all():
+                print(f"🔍 GET_CART_API: Item: {item.product.title} (Qty: {item.quantity})")
+        else:
+            print(f"🔍 GET_CART_API: Cart is empty - no items found")
         
         # Get cart details
         
         # Clear expired items
         expired_count = cart.clear_expired_items()
+        print(f"🔍 GET_CART_API: Expired items cleared: {expired_count}")
         
         # Serialize cart
         cart_serializer = CartSerializer(cart)
+        print(f"🔍 GET_CART_API: Cart serialized - Items in response: {len(cart_serializer.data.get('items', []))}")
         
         response_data = {
             'success': True,
@@ -463,6 +487,7 @@ def get_cart(request):
         return Response(response_data, status=status.HTTP_200_OK)
         
     except Exception as e:
+        print(f"🔍 GET_CART_API: get_cart error: {str(e)}")
         return Response({
             'success': False,
             'error': str(e)
