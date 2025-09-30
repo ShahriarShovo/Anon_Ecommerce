@@ -292,6 +292,11 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 
 class AdminConsumer(AsyncJsonWebsocketConsumer):
     """WebSocket consumer for admin/staff inbox"""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Initialize group attributes to safe defaults so disconnect never fails
+        self.admin_group_name = None
+        self.user = None
     
     async def connect(self):
         """Handle WebSocket connection"""
@@ -331,10 +336,15 @@ class AdminConsumer(AsyncJsonWebsocketConsumer):
         await self.update_online_status(False)
         
         # Leave admin group
-        await self.channel_layer.group_discard(
-            self.admin_group_name,
-            self.channel_name
-        )
+        if getattr(self, 'admin_group_name', None):
+            try:
+                await self.channel_layer.group_discard(
+                    self.admin_group_name,
+                    self.channel_name
+                )
+            except Exception:
+                # Silently ignore if group cleanup fails; we are disconnecting anyway
+                pass
     
     async def receive_json(self, content):
         """Handle incoming WebSocket messages"""
