@@ -1,4 +1,5 @@
 from rest_framework import generics, status
+from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
@@ -55,16 +56,21 @@ class EmailSettingsDetailView(generics.RetrieveUpdateDestroyAPIView):
         return EmailSettings.objects.filter(created_by=self.request.user)
     
     def perform_destroy(self, instance):
-        # Check if this is the only active email
+        # Prevent deleting the only active configuration
         if instance.is_active and EmailSettings.objects.filter(
-            created_by=self.request.user, 
+            created_by=self.request.user,
             is_active=True
         ).count() <= 1:
-            raise ValueError("Cannot delete the only active email configuration.")
-        
-        # Allow deletion of primary email configuration
-        # Admin can delete any email configuration including primary ones
-        
+            raise ValidationError({
+                'detail': 'Cannot delete the only active email configuration. Activate another or deactivate this first.'
+            })
+
+        # Prevent deleting primary configuration to keep a valid primary
+        if instance.is_primary:
+            raise ValidationError({
+                'detail': 'Cannot delete primary email settings. Set another as primary first.'
+            })
+
         instance.delete()
 
 
@@ -116,10 +122,10 @@ def test_smtp_connection(request):
     """
     Test SMTP connection with provided credentials
     """
-    print(f"SMTP Test Request Data: {request.data}")  # Debug print
+    # Removed debug print
     serializer = SMTPTestSerializer(data=request.data)
     if not serializer.is_valid():
-        print(f"SMTP Test Validation Errors: {serializer.errors}")  # Debug print
+        # Removed debug print
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     data = serializer.validated_data
@@ -157,7 +163,6 @@ def test_smtp_connection(request):
         
     except smtplib.SMTPAuthenticationError as e:
         logger.error(f"SMTP Authentication Error: {str(e)}")
-        print(f"SMTP Authentication Error: {str(e)}")  # Debug print
         return Response({
             'success': False,
             'message': f'Authentication failed: {str(e)}'
@@ -165,7 +170,6 @@ def test_smtp_connection(request):
         
     except smtplib.SMTPConnectError as e:
         logger.error(f"SMTP Connection Error: {str(e)}")
-        print(f"SMTP Connection Error: {str(e)}")  # Debug print
         return Response({
             'success': False,
             'message': f'Connection failed: {str(e)}'
@@ -180,7 +184,6 @@ def test_smtp_connection(request):
         
     except Exception as e:
         logger.error(f"Unexpected Error: {str(e)}")
-        print(f"Unexpected SMTP Error: {str(e)}")  # Debug print
         return Response({
             'success': False,
             'message': f'Unexpected error: {str(e)}'

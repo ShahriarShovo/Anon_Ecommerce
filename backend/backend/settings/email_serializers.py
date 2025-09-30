@@ -49,12 +49,23 @@ class EmailSettingsSerializer(serializers.ModelSerializer):
         return True
     
     def validate_email_address(self, value):
-        """Validate email address format"""
+        """Validate email address format and uniqueness"""
         validator = EmailValidator()
         try:
             validator(value)
         except ValidationError:
             raise serializers.ValidationError("Enter a valid email address.")
+        
+        # Check for duplicate email address for the same user
+        user = self.context['request'].user
+        existing = EmailSettings.objects.filter(
+            email_address=value,
+            created_by=user
+        ).exclude(pk=self.instance.pk if self.instance else None)
+        
+        if existing.exists():
+            raise serializers.ValidationError("An email setting with this address already exists for your account.")
+        
         return value
     
     def validate_smtp_port(self, value):
