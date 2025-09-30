@@ -16,16 +16,13 @@ def homepage_products(request):
     Returns: image, category name, product name, price
     """
     try:
-        print(f"🔍 HOME_PAGE_API: homepage_products called - User: {request.user}, Session: {request.session.session_key}")
-        print(f"🔍 HOME_PAGE_API: Stack trace:")
-        import traceback
-        traceback.print_stack()
+        
         
         # Get active products with images, reviews, and variants
         products = Product.objects.filter(
             status='active'
         ).select_related('category').prefetch_related('images', 'reviews', 'variants').order_by('-created_at')[:12]
-        print(f"🔍 HOME_PAGE_API: Found {products.count()} products for homepage")
+        
         
         # Prepare response data
         products_data = []

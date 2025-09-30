@@ -30,7 +30,7 @@ class OrderItemTrackingSerializer(serializers.ModelSerializer):
                     # Convert relative URL to absolute URL
                     if image_url.startswith('/media/'):
                         image_url = f"http://localhost:8000{image_url}"
-                    print(f"Product {obj.product.id} primary image URL: {image_url}")
+                    
                     return image_url
                 
                 # Fallback to first image
@@ -41,15 +41,14 @@ class OrderItemTrackingSerializer(serializers.ModelSerializer):
                         # Convert relative URL to absolute URL
                         if image_url.startswith('/media/'):
                             image_url = f"http://localhost:8000{image_url}"
-                        print(f"Product {obj.product.id} first image URL: {image_url}")
+                        
                         return image_url
                 
-                print(f"Product {obj.product.id} has no images")
+                
             else:
-                print("No product found for order item")
+                pass
             return None
         except Exception as e:
-            print(f"Error getting product image for {obj.product.id if obj.product else 'None'}: {str(e)}")
             return None
     
     def get_variation(self, obj):

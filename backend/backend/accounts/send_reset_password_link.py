@@ -52,60 +52,27 @@ def send_password_reset_email(user_email):
         # Email subject and content
         subject = "Password Reset Request - GreatKart"
         
-        # HTML email template
-        html_message = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Password Reset</title>
-        </head>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background: #f8f9fa; padding: 30px; border-radius: 10px; text-align: center;">
-                <h2 style="color: #007bff; margin-bottom: 20px;">
-                    <i class="fa fa-lock" style="margin-right: 10px;"></i>
-                    Password Reset Request
-                </h2>
-                
-                <p style="font-size: 16px; margin-bottom: 25px;">
-                    Hello <strong>{user.profile.full_name or user.email}</strong>,
-                </p>
-                
-                <p style="font-size: 16px; margin-bottom: 25px;">
-                    We received a request to reset your password for your GreatKart account.
-                </p>
-                
-                <div style="background: #fff; padding: 25px; border-radius: 8px; border: 1px solid #dee2e6; margin: 25px 0;">
-                    <p style="margin-bottom: 20px; font-size: 16px;">
-                        Click the button below to reset your password:
-                    </p>
-                    
-                    <a href="{reset_link}" 
-                       style="background: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; font-size: 16px;">
-                        Reset My Password
-                    </a>
-                </div>
-                
-                <p style="font-size: 14px; color: #6c757d; margin-top: 25px;">
-                    If the button doesn't work, copy and paste this link into your browser:
-                </p>
-                <p style="font-size: 12px; color: #6c757d; word-break: break-all; background: #f8f9fa; padding: 10px; border-radius: 4px;">
-                    {reset_link}
-                </p>
-                
-                <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6;">
-                    <p style="font-size: 14px; color: #6c757d; margin: 0;">
-                        <strong>Important:</strong> This link will expire in 24 hours for security reasons.
-                    </p>
-                    <p style="font-size: 14px; color: #6c757d; margin: 10px 0 0 0;">
-                        If you didn't request this password reset, please ignore this email.
-                    </p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
+        # Use template from email_templates folder
+        from django.template.loader import render_to_string
+        from settings.models import Logo
+        from settings.footer_settings_model import FooterSettings
+        
+        # Get company info
+        logo = Logo.objects.filter(is_active=True).first()
+        footer = FooterSettings.objects.filter(is_active=True).first()
+        
+        context = {
+            'customer_name': user.profile.full_name or user.email,
+            'reset_link': reset_link,
+            'company_name': 'GreatKart',
+            'company_email': footer.email if footer else 'info@greatkart.com',
+            'company_phone': footer.phone if footer else '+880-123-456-789',
+            'company_address': 'Dhaka, Bangladesh',
+            'logo_url': logo.logo_url if logo else None
+        }
+        
+        # Render template
+        html_message = render_to_string('authentication/password_reset.html', context)
         
         # Plain text version
         text_message = f"""

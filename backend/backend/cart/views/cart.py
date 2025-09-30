@@ -88,17 +88,13 @@ def add_to_cart(request):
     }
     """
     try:
-        print(f"🔍 ADD_TO_CART: add_to_cart API called - User: {request.user}, Session: {request.session.session_key}")
-        print(f"🔍 ADD_TO_CART: Request data: {request.data}")
-        print(f"🔍 ADD_TO_CART: Stack trace:")
-        import traceback
-        traceback.print_stack()
+        # print(f"🔍 ADD_TO_CART: add_to_cart API called - User: {request.user}, Session: {request.session.session_key}")
+        # print(f"🔍 ADD_TO_CART: Request data: {request.data}")
         
         # Validate request data
         # print(f"🛒 Backend: Add to cart request data: {request.data}")
         serializer = AddToCartSerializer(data=request.data)
         if not serializer.is_valid():
-            print(f"🔍 DEBUG: Validation failed: {serializer.errors}")
             # print(f"🛒 Backend: Validation failed: {serializer.errors}")
             return Response({
                 'success': False,
@@ -239,8 +235,7 @@ def remove_cart_item(request, item_id):
                 cart.calculate_totals()
                 # print(f"🛒 Backend: Cart totals updated - Total items: {cart.total_items}, Subtotal: {cart.subtotal}")
             else:
-                print(f"🛒 Backend: Cart deleted (empty guest cart)")
-        
+                pass
         # Handle response based on whether cart was deleted
         if cart_deleted:
             # Cart was deleted (guest user)
@@ -379,7 +374,7 @@ def decrease_cart_item_quantity(request, item_id):
                 # Update cart totals (for authenticated users)
                 cart.calculate_totals()
             else:
-                print(f"🛒 Backend: Cart deleted (empty guest cart)")
+                pass
         
         # Handle response based on whether cart was deleted
         if cart_deleted:
@@ -438,13 +433,11 @@ def get_cart(request):
     }
     """
     try:
-        print(f"🔍 GET_CART_API: get_cart API called - User: {request.user}, Session: {request.session.session_key}")
         
         # Get or create cart
         cart = get_or_create_cart(request)
         
         if cart is None:
-            print(f"🔍 GET_CART_API: No cart found for guest user")
             # Return empty cart for guest users
             return Response({
                 'success': True,
@@ -456,25 +449,20 @@ def get_cart(request):
                 }
             }, status=status.HTTP_200_OK)
         
-        print(f"🔍 GET_CART_API: Cart retrieved - ID: {cart.id}, Items: {cart.items.count()}")
+        
         
         # Check if there are any items in cart
         if cart.items.count() > 0:
-            print(f"🔍 GET_CART_API: WARNING - Cart has {cart.items.count()} items!")
             for item in cart.items.all():
-                print(f"🔍 GET_CART_API: Item: {item.product.title} (Qty: {item.quantity})")
-        else:
-            print(f"🔍 GET_CART_API: Cart is empty - no items found")
+                pass
         
         # Get cart details
         
         # Clear expired items
         expired_count = cart.clear_expired_items()
-        print(f"🔍 GET_CART_API: Expired items cleared: {expired_count}")
         
         # Serialize cart
         cart_serializer = CartSerializer(cart)
-        print(f"🔍 GET_CART_API: Cart serialized - Items in response: {len(cart_serializer.data.get('items', []))}")
         
         response_data = {
             'success': True,
@@ -487,7 +475,6 @@ def get_cart(request):
         return Response(response_data, status=status.HTTP_200_OK)
         
     except Exception as e:
-        print(f"🔍 GET_CART_API: get_cart error: {str(e)}")
         return Response({
             'success': False,
             'error': str(e)

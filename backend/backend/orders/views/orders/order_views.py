@@ -20,8 +20,7 @@ def create_order(request):
     """
     Create a new order from cart items
     """
-    print(f"🛒 Order Creation: User: {request.user.email}")
-    print(f"🛒 Order Creation: Request data: {request.data}")
+    
     
     try:
         with transaction.atomic():
@@ -30,31 +29,31 @@ def create_order(request):
                 # Get the most recent cart if multiple exist
                 cart = Cart.objects.filter(user=request.user).order_by('-created_at').first()
                 if not cart:
-                    print(f"🛒 No cart found for user: {request.user.email}")
+                    
                     return Response({
                         'success': False,
                         'message': 'No cart found for user'
                     }, status=status.HTTP_400_BAD_REQUEST)
                 
                 cart_items = CartItem.objects.filter(cart=cart)
-                print(f"🛒 Cart found: ID {cart.id}, Items: {cart_items.count()}")
+                
                 
                 # Clean up any duplicate carts (keep only the most recent one)
                 duplicate_carts = Cart.objects.filter(user=request.user).exclude(id=cart.id)
                 if duplicate_carts.exists():
-                    print(f"🛒 Found {duplicate_carts.count()} duplicate carts, cleaning up...")
+                    
                     duplicate_carts.delete()
-                    print(f"🛒 Cleaned up duplicate carts")
+                    
                     
             except Exception as e:
-                print(f"🛒 Error getting cart: {str(e)}")
+                
                 return Response({
                     'success': False,
                     'message': 'Error accessing cart'
                 }, status=status.HTTP_400_BAD_REQUEST)
             
             if not cart_items.exists():
-                print(f"🛒 Cart is empty for user: {request.user.email}")
+                
                 return Response({
                     'success': False,
                     'message': 'Cart is empty'
@@ -62,16 +61,16 @@ def create_order(request):
             
             # Handle address - use existing or create new
             address_data = request.data.get('address', {})
-            print(f"🛒 Address data: {address_data}")
+            
             
             # Check if address_id is provided (for existing address)
             address_id = request.data.get('address_id')
             if address_id:
                 try:
                     address = Address.objects.get(id=address_id, user=request.user)
-                    print(f"🛒 Using existing address: ID {address.id}")
+                    
                 except Address.DoesNotExist:
-                    print(f"🛒 Address not found: ID {address_id}")
+                    
                     return Response({
                         'success': False,
                         'message': 'Address not found'
@@ -87,7 +86,7 @@ def create_order(request):
                         city=address_data.get('city'),
                         country=address_data.get('country')
                     )
-                    print(f"🛒 Using existing address: ID {address.id}")
+                    
                 except Address.DoesNotExist:
                     # Create new address
                     address_serializer = AddressCreateSerializer(
@@ -96,7 +95,7 @@ def create_order(request):
                     )
                     
                     if not address_serializer.is_valid():
-                        print(f"🛒 Address validation failed: {address_serializer.errors}")
+                        
                         return Response({
                             'success': False,
                             'message': 'Invalid address data',
@@ -104,11 +103,11 @@ def create_order(request):
                         }, status=status.HTTP_400_BAD_REQUEST)
                     
                     address = address_serializer.save()
-                    print(f"🛒 Address created: ID {address.id}")
+                    
             
             # Get payment method
             payment_method_type = request.data.get('payment_method', 'cash_on_delivery')
-            print(f"🛒 Payment method type: {payment_method_type}")
+            
             
             payment_method = PaymentMethod.objects.filter(
                 method_type=payment_method_type,
@@ -116,7 +115,7 @@ def create_order(request):
             ).first()
             
             if not payment_method:
-                print(f"🛒 Payment method not found: {payment_method_type}")
+                
                 return Response({
                     'success': False,
                     'message': f'Payment method "{payment_method_type}" not found or inactive'
@@ -131,8 +130,8 @@ def create_order(request):
                 'tax_amount': 0.00,     # No tax for now
                 'total_amount': cart.subtotal
             }
-            print(f"🛒 Order data: {order_data}")
-            print(f"🛒 Cart subtotal: {cart.subtotal}")
+            
+            
             
             order_serializer = OrderCreateSerializer(
                 data=order_data,
@@ -140,7 +139,7 @@ def create_order(request):
             )
             
             if not order_serializer.is_valid():
-                print(f"🛒 Order validation failed: {order_serializer.errors}")
+                
                 return Response({
                     'success': False,
                     'message': 'Invalid order data',
@@ -148,11 +147,11 @@ def create_order(request):
                 }, status=status.HTTP_400_BAD_REQUEST)
             
             order = order_serializer.save()
-            print(f"🛒 Order created: ID {order.id}, Number {order.order_number}")
+            
             
             # Create order items from cart items
             for cart_item in cart_items:
-                print(f"🛒 Creating order item for product: {cart_item.product.title}")
+                
                 order_item = OrderItem.objects.create(
                     order=order,
                     product=cart_item.product,
@@ -164,7 +163,7 @@ def create_order(request):
                     product_sku=getattr(cart_item.product, 'sku', None),  # Handle missing sku field
                     variant_title=str(cart_item.variant) if cart_item.variant else None
                 )
-                print(f"🛒 Order item created: ID {order_item.id}")
+                
             
             # Create payment
             payment = Payment.objects.create(
@@ -173,7 +172,7 @@ def create_order(request):
                 amount=order.total_amount,
                 status='pending' if payment_method.is_cod else 'processing'
             )
-            print(f"🛒 Payment created: ID {payment.id}, Status: {payment.status}")
+            
             
             # Clear cart after successful order
             cart_items.delete()
@@ -181,7 +180,18 @@ def create_order(request):
             # Delete the cart model completely after successful order
             cart_id = cart.id
             cart.delete()
-            print(f"🛒 Cart deleted completely: ID {cart_id}")
+            
+            
+            # Send order confirmation email with invoice
+            try:
+                from orders.send_invoice_to_email.email_service import InvoiceEmailService
+                email_sent = InvoiceEmailService.send_order_confirmation_email(order)
+                if email_sent:
+                    pass
+                else:
+                    pass
+            except Exception as e:
+                pass
             
             # Return order details
             order_serializer = OrderSerializer(order, context={'request': request})
@@ -193,7 +203,7 @@ def create_order(request):
             }, status=status.HTTP_201_CREATED)
             
     except Exception as e:
-        print(f"🛒 Order creation error: {str(e)}")
+        
         import traceback
         traceback.print_exc()
         return Response({
@@ -323,6 +333,18 @@ def update_order_status(request, order_id):
             order.delivered_at = timezone.now()
         
         order.save()
+        
+        # Send order delivered email with invoice if status is delivered
+        if new_status == 'delivered':
+            try:
+                from orders.send_invoice_to_email.email_service import InvoiceEmailService
+                email_sent = InvoiceEmailService.send_order_delivered_email(order)
+                if email_sent:
+                    pass
+                else:
+                    pass
+            except Exception as e:
+                pass
         
         serializer = OrderSerializer(order, context={'request': request})
         

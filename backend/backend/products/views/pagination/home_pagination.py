@@ -94,10 +94,7 @@ class HomePaginationViewSet(viewsets.ViewSet):
         """
         Get paginated products for home page with optional filters
         """
-        print(f"🔍 PAGINATION_API: get_paginated_products called - User: {request.user}, Session: {request.session.session_key}")
-        print(f"🔍 PAGINATION_API: Stack trace:")
-        import traceback
-        traceback.print_stack()
+        # print(f"🔍 PAGINATION_API: get_paginated_products called - User: {request.user}, Session: {request.session.session_key}")
         
         # Base queryset - only active products
         queryset = Product.objects.filter(status='active').select_related('category', 'subcategory').prefetch_related('images')

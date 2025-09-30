@@ -53,27 +53,21 @@ class Signup_user(APIView):
         tags=['Authentication']
     )
     def post(self, request, format=None):
-        print(f"🔍 DEBUG: Signup request data: {request.data}")
         serializer = UserRegistrationSerializers(data=request.data)
         if serializer.is_valid(raise_exception=True):
             user=serializer.save()
-            print(f"🔍 DEBUG: User created: {user.email}")
             
             # Generate email verification token
             from accounts.email_verification_service import EmailVerificationService
             verification_token = EmailVerificationService.generate_verification_token()
-            print(f"🔍 DEBUG: Generated token: {verification_token}")
             
             user.email_verification_token = verification_token
             user.email_verification_sent_at = timezone.now()
             user.is_email_verified = False  # Set to False initially
             user.save()
-            print(f"🔍 DEBUG: User saved with token: {user.email_verification_token}")
-            print(f"🔍 DEBUG: User verification status: {user.is_email_verified}")
             
             # Send verification email
             email_sent = EmailVerificationService.send_verification_email(request, user, verification_token)
-            print(f"🔍 DEBUG: Email sent result: {email_sent}")
             
             if email_sent:
                 return Response({
@@ -480,14 +474,25 @@ class ResendVerificationEmailView(APIView):
         """
         try:
             email = request.data.get('email')
+            print(f"🔍 DEBUG: Resend verification request data: {request.data}")
+            print(f"🔍 DEBUG: Email from request: {email}")
+            print(f"🔍 DEBUG: Email type: {type(email)}")
+            print(f"🔍 DEBUG: Email length: {len(email) if email else 'None'}")
+            print(f"🔍 DEBUG: Email repr: {repr(email)}")
+            
             if not email:
                 return Response({
                     'message': 'Email is required',
                     'email_sent': False
                 }, status=status.HTTP_400_BAD_REQUEST)
             
-            # Find user by email
-            user = User.objects.filter(email=email).first()
+            # Find user by email (case insensitive)
+            user = User.objects.filter(email__iexact=email).first()
+            print(f"🔍 DEBUG: User found: {user}")
+            print(f"🔍 DEBUG: User email: {user.email if user else 'None'}")
+            print(f"🔍 DEBUG: User verification status: {user.is_email_verified if user else 'None'}")
+            print(f"🔍 DEBUG: All users with similar email: {list(User.objects.filter(email__icontains=email.split('@')[0]).values_list('email', flat=True))}")
+            
             if not user:
                 return Response({
                     'message': 'User not found',

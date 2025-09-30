@@ -16,7 +16,7 @@ def get_single_product(request, slug):
     Returns: Complete product information with images and variants
     """
     try:
-        print(f"🔍 PRODUCT_VIEW: get_single_product called - Slug: {slug}, User: {request.user}, Session: {request.session.session_key}")
+        
         
         # Get product with related data
         product = get_object_or_404(
@@ -25,12 +25,7 @@ def get_single_product(request, slug):
             slug=slug,
             status='active'
         )
-        print(f"🔍 PRODUCT_VIEW: Product found - ID: {product.id}, Title: {product.title}")
         
-        # Check if this is causing cart additions
-        print(f"🔍 PRODUCT_VIEW: Stack trace:")
-        import traceback
-        traceback.print_stack()
         
         # Use ProductDetailSerializer to get all fields including display_price
         serializer = ProductDetailSerializer(product)

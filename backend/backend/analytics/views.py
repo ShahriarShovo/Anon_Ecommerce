@@ -436,8 +436,7 @@ def generate_excel_report(request):
         
     except Exception as e:
         import traceback
-        print(f"Excel Report Error: {str(e)}")
-        print(f"Traceback: {traceback.format_exc()}")
+        
         return Response({
             'success': False,
             'message': f'Failed to generate Excel report: {str(e)}'

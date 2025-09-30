@@ -14,7 +14,8 @@ class MyUserManager(BaseUserManager):
         if not email:
             raise ValueError("Email must have to set !")
 
-        email=self.normalize_email(email)
+        # Don't normalize email to preserve original user input
+        # email=self.normalize_email(email)
         user=self.model(email=email, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
