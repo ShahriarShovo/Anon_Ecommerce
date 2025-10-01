@@ -8,6 +8,7 @@ from .email_view import (
     send_test_email, bulk_update_email_settings, preview_email_template,
     get_active_email_settings, get_email_statistics
 )
+from .fix_primary_email_view import fix_primary_emails, check_primary_emails, switch_primary_email
 from .footer_settings_views import (
     FooterSettingsListCreateView, FooterSettingsDetailView,
     SocialMediaLinkListCreateView, SocialMediaLinkDetailView,
@@ -42,6 +43,11 @@ urlpatterns = [
     
     # Statistics URLs
     path('email-statistics/', get_email_statistics, name='email-statistics'),
+    
+    # Fix Primary Emails URLs
+    path('fix-primary-emails/', fix_primary_emails, name='fix-primary-emails'),
+    path('check-primary-emails/', check_primary_emails, name='check-primary-emails'),
+    path('switch-primary-email/', switch_primary_email, name='switch-primary-email'),
     
     # Footer Settings URLs
     path('footer-settings/', FooterSettingsListCreateView.as_view(), name='footer-settings-list'),

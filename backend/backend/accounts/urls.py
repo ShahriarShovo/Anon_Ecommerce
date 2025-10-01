@@ -12,6 +12,7 @@ urlpatterns = [
     path('register/', views.Signup_user.as_view()),  # Alias for frontend compatibility
     path('login/', views.User_login.as_view()),
     path('profile/', views.current_user),
+    path('last-login/', views.get_user_last_login),
     path('update-profile/<int:user_id>/', views.update_profile),
     path('change-password/', views.User_Change_Password.as_view()),
     path('users/', views.UserListView.as_view()),  # Admin users list
@@ -25,6 +26,9 @@ urlpatterns = [
     
     # Permission management URLs
     path('permissions/', include('accounts.permission_urls')),
+    path('permissions/', include('accounts.permission_crud_urls')),
+    path('permissions/', include('accounts.advanced_user_permission_urls')),
+    path('permissions/', include('accounts.dynamic_permission_urls')), # Dynamic permissions
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     
     # Admin user management URLs

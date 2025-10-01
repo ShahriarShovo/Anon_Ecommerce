@@ -245,12 +245,17 @@ def create_default_permissions(request):
 
     created_permissions = []
     for perm_data in default_permissions:
-        permission, created = Permission.objects.get_or_create(
-            codename=perm_data['codename'],
-            defaults=perm_data
-        )
-        if created:
-            created_permissions.append(permission.name)
+        try:
+            permission, created = Permission.objects.get_or_create(
+                codename=perm_data['codename'],
+                defaults=perm_data
+            )
+            if created:
+                created_permissions.append(permission.name)
+        except Exception as e:
+            # Skip if permission already exists or other error
+            print(f"Permission {perm_data['codename']} already exists or error: {e}")
+            continue
 
     # Create default roles
     default_roles = [
@@ -291,25 +296,31 @@ def create_default_permissions(request):
 
     created_roles = []
     for role_data in default_roles:
-        role, created = Role.objects.get_or_create(
-            name=role_data['name'],
-            defaults={
-                'description': role_data['description'],
-                'is_system_role': role_data['is_system_role']
-            }
-        )
-        if created:
-            created_roles.append(role.name)
-            # Assign permissions to role
-            for perm_codename in role_data['permissions']:
-                try:
-                    permission = Permission.objects.get(codename=perm_codename)
-                    RolePermission.objects.get_or_create(role=role, permission=permission)
-                except Permission.DoesNotExist:
-                    pass  # Skip if permission doesn't exist
+        try:
+            role, created = Role.objects.get_or_create(
+                name=role_data['name'],
+                defaults={
+                    'description': role_data['description'],
+                    'is_system_role': role_data['is_system_role']
+                }
+            )
+            if created:
+                created_roles.append(role.name)
+                # Assign permissions to role
+                for perm_codename in role_data['permissions']:
+                    try:
+                        permission = Permission.objects.get(codename=perm_codename)
+                        RolePermission.objects.get_or_create(role=role, permission=permission)
+                    except Permission.DoesNotExist:
+                        pass  # Skip if permission doesn't exist
+        except Exception as e:
+            # Skip if role already exists or other error
+            print(f"Role {role_data['name']} already exists or error: {e}")
+            continue
 
     return Response({
-        'message': f'Created {len(created_permissions)} new permissions and {len(created_roles)} new roles',
+        'message': f'Successfully processed permissions and roles. Created {len(created_permissions)} new permissions and {len(created_roles)} new roles.',
         'permissions': created_permissions,
-        'roles': created_roles
+        'roles': created_roles,
+        'success': True
     })

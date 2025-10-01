@@ -118,24 +118,33 @@ class EmailSettingsSerializer(serializers.ModelSerializer):
         # Set created_by from request user
         validated_data['created_by'] = self.context['request'].user
         
-        # If this is the first email setting, make it primary and active
-        user = validated_data['created_by']
-        existing_count = EmailSettings.objects.filter(created_by=user).count()
-        if existing_count == 0:
-            validated_data['is_primary'] = True
-            validated_data['is_active'] = True
+        # Only make primary if explicitly requested by client
+        # Don't auto-set primary for new emails
+        if not validated_data.get('is_primary', False):
+            validated_data['is_primary'] = False
+        
+        # If client tries to set primary on create, ensure global uniqueness
+        if validated_data.get('is_primary'):
+            EmailSettings.objects.all().update(is_primary=False)
         
         return super().create(validated_data)
     
     def update(self, instance, validated_data):
         """Update email settings"""
-        # Handle primary email logic
-        if validated_data.get('is_primary', False):
-            # Unset other primary emails for this user
-            EmailSettings.objects.filter(
-                created_by=instance.created_by,
-                is_primary=True
-            ).exclude(pk=instance.pk).update(is_primary=False)
+        # Handle primary email logic (global uniqueness)
+        if 'is_primary' in validated_data:
+            new_primary = validated_data.get('is_primary') is True
+            if new_primary:
+                # Unset primary on all other records globally
+                EmailSettings.objects.exclude(pk=instance.pk).update(is_primary=False)
+            else:
+                # If turning off primary, ensure at least one other becomes primary if exists
+                if instance.is_primary:
+                    replacement = EmailSettings.objects.exclude(pk=instance.pk).order_by('-updated_at', '-created_at').first()
+                    if replacement:
+                        replacement.is_primary = True
+                        replacement.is_active = True
+                        replacement.save(update_fields=['is_primary', 'is_active', 'updated_at'])
         
         return super().update(instance, validated_data)
 

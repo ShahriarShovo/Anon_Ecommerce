@@ -12,6 +12,29 @@ from drf_yasg import openapi
 User = get_user_model()
 
 
+def _format_last_login(last_login):
+    """Format last login in Bangladesh timezone with 12-hour format"""
+    if not last_login:
+        return 'Never'
+    
+    import pytz
+    
+    # Get Bangladesh timezone
+    bd_tz = pytz.timezone('Asia/Dhaka')
+    
+    # Convert UTC datetime to Bangladesh timezone
+    if last_login.tzinfo is None:
+        # If naive datetime, assume it's UTC
+        utc_dt = pytz.utc.localize(last_login)
+    else:
+        utc_dt = last_login.astimezone(pytz.utc)
+    
+    bd_dt = utc_dt.astimezone(bd_tz)
+    
+    # Format in 12-hour format with AM/PM
+    return bd_dt.strftime('%Y-%m-%d %I:%M:%S %p')
+
+
 class AdminUserProfileUpdateView(generics.UpdateAPIView):
     """
     Admin can update any user's profile
@@ -138,6 +161,7 @@ def admin_get_user_details(request, user_id):
             'is_email_verified': user.is_email_verified,
             'date_joined': user.date_joined,
             'last_login': user.last_login,
+            'last_login_formatted': _format_last_login(user.last_login),
             'profile': {
                 'full_name': user.profile.full_name if hasattr(user, 'profile') else '',
                 'username': user.profile.username if hasattr(user, 'profile') else '',

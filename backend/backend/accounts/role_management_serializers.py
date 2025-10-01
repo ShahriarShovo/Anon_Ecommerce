@@ -9,10 +9,33 @@ class AdminStaffUserSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(source='profile.full_name', read_only=True)
     username = serializers.CharField(source='profile.username', read_only=True)
     phone = serializers.CharField(source='profile.phone', read_only=True)
+    last_login_formatted = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'email', 'full_name', 'username', 'phone', 'is_active', 'is_staff', 'is_superuser', 'date_joined', 'last_login']
+        fields = ['id', 'email', 'full_name', 'username', 'phone', 'is_active', 'is_staff', 'is_superuser', 'date_joined', 'last_login', 'last_login_formatted']
+    
+    def get_last_login_formatted(self, obj):
+        if obj.last_login:
+            # Convert to Bangladesh timezone and format in 12-hour format
+            from django.utils import timezone
+            import pytz
+            
+            # Get Bangladesh timezone
+            bd_tz = pytz.timezone('Asia/Dhaka')
+            
+            # Convert UTC datetime to Bangladesh timezone
+            if obj.last_login.tzinfo is None:
+                # If naive datetime, assume it's UTC
+                utc_dt = pytz.utc.localize(obj.last_login)
+            else:
+                utc_dt = obj.last_login.astimezone(pytz.utc)
+            
+            bd_dt = utc_dt.astimezone(bd_tz)
+            
+            # Format in 12-hour format with AM/PM
+            return bd_dt.strftime('%Y-%m-%d %I:%M:%S %p')
+        return 'Never'
 
 
 class SetUserRoleSerializer(serializers.Serializer):

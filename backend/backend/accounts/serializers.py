@@ -3,9 +3,15 @@ from django.forms import ValidationError
 from rest_framework import serializers
 from accounts.models import User
 from accounts.models import Profile
+from accounts.permission_models import Permission
 from rest_framework import status
 from rest_framework.response import Response
 
+
+class PermissionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Permission
+        fields = ['id', 'name', 'codename', 'description', 'category', 'is_active', 'created_at', 'updated_at']
 
 
 class UserRegistrationSerializers(serializers.ModelSerializer):

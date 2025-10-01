@@ -39,7 +39,26 @@ class EmailSettingsListCreateView(generics.ListCreateAPIView):
         return EmailSettingsSerializer
     
     def get_queryset(self):
-        return EmailSettings.objects.filter(created_by=self.request.user).order_by('priority', '-created_at')
+        # Show user's own settings; also include global primary active config for visibility
+        user_qs = EmailSettings.objects.filter(created_by=self.request.user)
+        global_primary = EmailSettings.objects.filter(is_active=True, is_primary=True)
+        
+        # Superusers and staff with settings_access can see all email settings
+        if self.request.user.is_superuser:
+            return EmailSettings.objects.all().order_by('priority', '-created_at')
+        
+        # Check if user has settings_access permission (for staff users)
+        try:
+            if self.request.user.has_perm('accounts.settings_access'):
+                return EmailSettings.objects.all().order_by('priority', '-created_at')
+        except:
+            pass
+        
+        # Also check if user is staff (alternative approach)
+        if self.request.user.is_staff:
+            return EmailSettings.objects.all().order_by('priority', '-created_at')
+        
+        return (user_qs | global_primary).distinct().order_by('priority', '-created_at')
     
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
@@ -53,24 +72,41 @@ class EmailSettingsDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = EmailSettingsSerializer
     
     def get_queryset(self):
-        return EmailSettings.objects.filter(created_by=self.request.user)
+        # Allow retrieving global primary as read-only for non-owners
+        qs = EmailSettings.objects.filter(created_by=self.request.user)
+        if self.request.method in ['GET']:
+            qs = qs | EmailSettings.objects.filter(is_active=True, is_primary=True)
+        elif self.request.method in ['DELETE', 'PATCH', 'PUT']:
+            # For delete/update operations, allow access to user's own settings
+            # and global primary settings (for admin operations)
+            if self.request.user.is_superuser:
+                qs = EmailSettings.objects.all()
+            else:
+                # Check if user has settings_access permission (for staff users)
+                try:
+                    if self.request.user.has_perm('accounts.settings_access'):
+                        qs = EmailSettings.objects.all()
+                    else:
+                        qs = EmailSettings.objects.filter(created_by=self.request.user)
+                except:
+                    qs = EmailSettings.objects.filter(created_by=self.request.user)
+                
+                # Also check if user is staff (alternative approach)
+                if self.request.user.is_staff:
+                    qs = EmailSettings.objects.all()
+        return qs.distinct()
     
     def perform_destroy(self, instance):
-        # Prevent deleting the only active configuration
-        if instance.is_active and EmailSettings.objects.filter(
-            created_by=self.request.user,
-            is_active=True
-        ).count() <= 1:
-            raise ValidationError({
-                'detail': 'Cannot delete the only active email configuration. Activate another or deactivate this first.'
-            })
-
-        # Prevent deleting primary configuration to keep a valid primary
+        # Allow deleting primary by promoting another if available
         if instance.is_primary:
-            raise ValidationError({
-                'detail': 'Cannot delete primary email settings. Set another as primary first.'
-            })
-
+            # Find another email setting to promote to primary
+            replacement = EmailSettings.objects.exclude(pk=instance.pk).order_by('-updated_at', '-created_at').first()
+            if replacement:
+                replacement.is_primary = True
+                replacement.is_active = True
+                replacement.save(update_fields=['is_primary', 'is_active', 'updated_at'])
+        
+        # Allow deleting even if it's the only active; user explicitly chose delete
         instance.delete()
 
 
@@ -483,15 +519,24 @@ def preview_email_template(request):
 @permission_classes([IsAuthenticated])
 def get_active_email_settings(request):
     """
-    Get currently active email settings for the user
+    Get currently active email settings for the user.
+    If the user does not have a personal primary active configuration,
+    fall back to the globally primary active configuration (admin-created).
     """
     try:
-        # Get primary active email settings
+        # Try user's own primary active settings first
         email_settings = EmailSettings.objects.filter(
             created_by=request.user,
             is_active=True,
             is_primary=True
         ).first()
+
+        # Fallback to global primary active settings (e.g., created by admin)
+        if not email_settings:
+            email_settings = EmailSettings.objects.filter(
+                is_active=True,
+                is_primary=True
+            ).order_by('-updated_at', '-created_at').first()
         
         if not email_settings:
             return Response({

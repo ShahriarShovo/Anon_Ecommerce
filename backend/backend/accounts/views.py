@@ -122,6 +122,10 @@ class User_login(APIView):
                         'email': user.email
                     }, status=status.HTTP_400_BAD_REQUEST)
                 
+                # Update last login timestamp
+                user.last_login = timezone.now()
+                user.save(update_fields=['last_login'])
+                
                 token=get_tokens_for_user(user)
                 
                 # Determine user type
@@ -164,6 +168,25 @@ def current_user(request):
     profile = get_object_or_404(Profile, user=user)
     Profile_serializer = ProfileSerializer(profile) 
     return Response(Profile_serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_last_login(request):
+    """
+    Get current user's last login information
+    """
+    user = request.user
+    
+    return Response({
+        'user_id': user.id,
+        'email': user.email,
+        'last_login': user.last_login,
+        'date_joined': user.date_joined,
+        'is_active': user.is_active,
+        'is_staff': user.is_staff,
+        'is_superuser': user.is_superuser
+    }, status=status.HTTP_200_OK)
 
 
 @swagger_auto_schema(
