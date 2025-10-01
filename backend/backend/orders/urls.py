@@ -1,5 +1,6 @@
 from django.urls import path
 from orders.views.orders.order_views import create_order, OrderListView, ActiveOrderListView, OrderDetailView, DeliveredOrderListView, CancelledRefundedOrderListView, update_order_status, cancel_order
+from orders.views.orders.order_count_views import get_pending_orders_count, get_order_statistics
 from orders.views.payments.payment_views import PaymentMethodListView, mark_cod_collected, PaymentDetailView
 from orders.views.orders.address_views import AddressListView, AddressDetailView, set_default_address, get_default_address
 from orders.views.tracking.order_tracking_views import OrderTrackingView, track_order_by_number, get_order_status, search_orders
@@ -7,6 +8,8 @@ from orders.views.tracking.order_tracking_views import OrderTrackingView, track_
 urlpatterns = [
     # Order URLs
     path('create/', create_order, name='create_order'),
+    path('pending-count/', get_pending_orders_count, name='pending_orders_count'),
+    path('statistics/', get_order_statistics, name='order_statistics'),
     path('', OrderListView.as_view(), name='order_list'),
     path('active/', ActiveOrderListView.as_view(), name='active_order_list'),
     path('delivered/', DeliveredOrderListView.as_view(), name='delivered_order_list'),

@@ -324,6 +324,9 @@ def update_order_status(request, order_id):
                 'message': f'Invalid status. Valid statuses are: {", ".join(valid_statuses)}'
             }, status=status.HTTP_400_BAD_REQUEST)
         
+        # Store previous status for WebSocket notification
+        previous_status = order.status
+        
         # Update order status
         order.status = new_status
         
@@ -332,6 +335,8 @@ def update_order_status(request, order_id):
             from django.utils import timezone
             order.delivered_at = timezone.now()
         
+        # Set previous status for signal tracking
+        order._previous_status = previous_status
         order.save()
         
         # Send order delivered email with invoice if status is delivered
@@ -381,8 +386,14 @@ def cancel_order(request, order_id):
         # Get cancel reason from request
         cancel_reason = request.data.get('cancel_reason', 'Cancelled by customer')
         
+        # Store previous status for WebSocket notification
+        previous_status = order.status
+        
         # Update order status to cancelled
         order.status = 'cancelled'
+        
+        # Set previous status for signal tracking
+        order._previous_status = previous_status
         order.save()
         
         # You can also store the cancel reason in a separate model if needed

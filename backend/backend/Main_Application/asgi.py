@@ -64,13 +64,17 @@ class JWTAuthMiddleware(BaseMiddleware):
             return AnonymousUser()
 
 # Import chat routing after Django setup
-from chat_and_notifications.routing import websocket_urlpatterns
+from chat_and_notifications.routing import websocket_urlpatterns as chat_websocket_urlpatterns
+from orders.routing import websocket_urlpatterns as order_websocket_urlpatterns
+
+# Combine all WebSocket URL patterns
+all_websocket_urlpatterns = chat_websocket_urlpatterns + order_websocket_urlpatterns
 
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),
     "websocket": AuthMiddlewareStack(
         JWTAuthMiddleware(
-            URLRouter(websocket_urlpatterns)
+            URLRouter(all_websocket_urlpatterns)
         )
     ),
 })
