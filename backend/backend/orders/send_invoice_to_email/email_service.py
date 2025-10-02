@@ -18,7 +18,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
 class InvoiceEmailService:
     """
     Service for sending invoice emails to customers

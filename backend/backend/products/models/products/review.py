@@ -58,7 +58,6 @@ class ProductReview(models.Model):
         else:
             return 'Anonymous'
 
-
 class ReviewVote(models.Model):
     """Model for tracking helpful votes on reviews"""
     review = models.ForeignKey(ProductReview, on_delete=models.CASCADE, related_name='votes')

@@ -7,7 +7,6 @@ import re
 
 User = get_user_model()
 
-
 class EmailSettingsSerializer(serializers.ModelSerializer):
     """
     Serializer for EmailSettings model
@@ -148,7 +147,6 @@ class EmailSettingsSerializer(serializers.ModelSerializer):
         
         return super().update(instance, validated_data)
 
-
 class EmailSettingsListSerializer(serializers.ModelSerializer):
     """
     Simplified serializer for email settings list view
@@ -164,7 +162,6 @@ class EmailSettingsListSerializer(serializers.ModelSerializer):
             'is_active', 'is_primary', 'priority', 'test_status', 'test_status_display', 
             'created_by_username', 'last_tested', 'created_at'
         ]
-
 
 class EmailTemplateSerializer(serializers.ModelSerializer):
     """
@@ -239,7 +236,6 @@ class EmailTemplateSerializer(serializers.ModelSerializer):
         validated_data['created_by'] = self.context['request'].user
         return super().create(validated_data)
 
-
 class EmailTemplateListSerializer(serializers.ModelSerializer):
     """
     Simplified serializer for email template list view
@@ -260,7 +256,6 @@ class EmailTemplateListSerializer(serializers.ModelSerializer):
         """Get count of available variables"""
         return len(obj.available_variables) if obj.available_variables else 0
 
-
 class EmailLogSerializer(serializers.ModelSerializer):
     """
     Serializer for EmailLog model
@@ -278,7 +273,6 @@ class EmailLogSerializer(serializers.ModelSerializer):
             'sent_at', 'delivered_at', 'created_at'
         ]
         read_only_fields = ['id', 'created_at']
-
 
 class SMTPTestSerializer(serializers.Serializer):
     """
@@ -299,7 +293,6 @@ class SMTPTestSerializer(serializers.Serializer):
         
         return data
 
-
 class EmailSendSerializer(serializers.Serializer):
     """
     Serializer for sending test emails
@@ -318,7 +311,6 @@ class EmailSendSerializer(serializers.Serializer):
             raise serializers.ValidationError("Either content or template must be provided.")
         
         return data
-
 
 class EmailSettingsBulkUpdateSerializer(serializers.Serializer):
     """
@@ -348,7 +340,6 @@ class EmailSettingsBulkUpdateSerializer(serializers.Serializer):
             raise serializers.ValidationError(f"Invalid email settings IDs: {list(invalid_ids)}")
         
         return value
-
 
 class EmailTemplatePreviewSerializer(serializers.Serializer):
     """

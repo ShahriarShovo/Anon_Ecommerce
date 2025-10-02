@@ -4,7 +4,6 @@ from django.utils import timezone
 
 User = get_user_model()
 
-
 class Conversation(models.Model):
     STATUS_CHOICES = [
         ('open', 'Open'),

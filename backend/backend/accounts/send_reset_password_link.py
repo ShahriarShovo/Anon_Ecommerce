@@ -8,16 +8,13 @@ from django.utils.html import strip_tags
 from django.utils import timezone
 from accounts.models import User
 
-
 def generate_reset_token():
     """Generate a secure random token for password reset"""
     return secrets.token_urlsafe(32)
 
-
 def create_reset_link(token):
     """Create the password reset link"""
     return f"http://localhost:3000/reset-password?token={token}"
-
 
 def send_password_reset_email(user_email):
     """
@@ -110,9 +107,8 @@ def send_password_reset_email(user_email):
             return False, "Failed to send email. Please try again later"
             
     except Exception as e:
-        print(f"Error sending password reset email: {str(e)}")
-        return False, "An error occurred while sending the email"
 
+        return False, "An error occurred while sending the email"
 
 def verify_reset_token(token):
     """
@@ -131,9 +127,8 @@ def verify_reset_token(token):
     except User.DoesNotExist:
         return False, None, "Invalid reset link. Please request a new one."
     except Exception as e:
-        print(f"Error verifying reset token: {str(e)}")
-        return False, None, "An error occurred while verifying the reset link"
 
+        return False, None, "An error occurred while verifying the reset link"
 
 def clear_reset_token(user):
     """Clear the reset token after successful password reset"""

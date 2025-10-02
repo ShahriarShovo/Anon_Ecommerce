@@ -4,7 +4,6 @@
 
 # User = get_user_model()
 
-
 # class Notification(models.Model):
 #     NOTIFICATION_TYPES = [
 #         ('general', 'General Notification'),
@@ -59,7 +58,6 @@
 #             return False
             
 #         return True
-
 
 # class NotificationView(models.Model):
 #     """Track individual views of notifications"""

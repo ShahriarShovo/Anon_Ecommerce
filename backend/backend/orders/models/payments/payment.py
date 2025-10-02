@@ -3,7 +3,6 @@ from django.utils import timezone
 from .payment_method import PaymentMethod
 from orders.models.orders.order import Order
 
-
 class Payment(models.Model):
     """
     Payment model for storing payment information

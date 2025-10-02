@@ -2,7 +2,6 @@ from rest_framework import serializers
 from invoice.models import Invoice
 from orders.serializers.orders.order_serializer import OrderSerializer
 
-
 class InvoiceSerializer(serializers.ModelSerializer):
     """Serializer for Invoice model"""
     

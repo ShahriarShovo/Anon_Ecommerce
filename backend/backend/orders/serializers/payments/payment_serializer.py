@@ -2,7 +2,6 @@ from rest_framework import serializers
 from orders.models.payments.payment import Payment
 from orders.models.payments.payment_method import PaymentMethod
 
-
 class PaymentMethodSerializer(serializers.ModelSerializer):
     """Serializer for PaymentMethod model"""
     
@@ -20,7 +19,6 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
             'display_order',
             'icon'
         ]
-
 
 class PaymentSerializer(serializers.ModelSerializer):
     """Serializer for Payment model"""

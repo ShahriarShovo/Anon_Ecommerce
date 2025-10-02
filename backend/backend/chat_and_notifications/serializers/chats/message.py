@@ -4,7 +4,6 @@ from ...models import Message, Conversation
 
 User = get_user_model()
 
-
 class MessageSerializer(serializers.ModelSerializer):
     """Full message serializer with sender details"""
     sender_name = serializers.CharField(source='sender.full_name', read_only=True)
@@ -23,7 +22,6 @@ class MessageSerializer(serializers.ModelSerializer):
     def get_is_sender_staff(self, obj):
         """Check if sender is staff/admin"""
         return obj.sender.is_staff or obj.sender.is_superuser
-
 
 class MessageCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating new messages"""
@@ -61,7 +59,6 @@ class MessageCreateSerializer(serializers.ModelSerializer):
         
         return value.strip()
 
-
 class MessageListSerializer(serializers.ModelSerializer):
     """Simplified message serializer for list views"""
     sender_name = serializers.CharField(source='sender.full_name', read_only=True)
@@ -78,7 +75,6 @@ class MessageListSerializer(serializers.ModelSerializer):
         """Check if sender is staff/admin"""
         return obj.sender.is_staff or obj.sender.is_superuser
 
-
 class MessageUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating messages (mark as read, etc.)"""
     
@@ -92,7 +88,6 @@ class MessageUpdateSerializer(serializers.ModelSerializer):
         if validated_data.get('is_read_by_recipient'):
             instance.mark_as_read()
         return instance
-
 
 class MessageMarkReadSerializer(serializers.Serializer):
     """Serializer for marking messages as read"""

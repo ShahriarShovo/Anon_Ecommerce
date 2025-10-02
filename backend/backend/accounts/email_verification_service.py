@@ -70,26 +70,21 @@ class EmailVerificationService:
         Send verification email to user using primary SMTP settings
         """
         try:
-            
-            
+
             # Get primary email settings
             email_settings = EmailVerificationService.get_primary_email_settings()
             if not email_settings:
                 
                 logger.error("No primary email settings available")
                 return False
-            
-            
-            
+
             # Create verification link
             verification_link = EmailVerificationService.create_verification_link(request, token)
             if not verification_link:
                 
                 logger.error("Failed to create verification link")
                 return False
-            
-            
-            
+
             # Email content - Better subject to avoid spam
             subject = "Please verify your email address for your new account"
             

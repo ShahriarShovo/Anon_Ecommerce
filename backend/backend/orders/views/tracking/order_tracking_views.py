@@ -10,7 +10,6 @@ from ...serializers.tracking.order_tracking_serializer import (
     OrderTrackingRequestSerializer
 )
 
-
 class OrderTrackingView(generics.RetrieveAPIView):
     """
     API view for tracking orders by order number
@@ -73,7 +72,6 @@ class OrderTrackingView(generics.RetrieveAPIView):
                 'message': f'Error tracking order: {str(e)}'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def track_order_by_number(request):
@@ -118,7 +116,6 @@ def track_order_by_number(request):
             'message': f'Error tracking order: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_order_status(request, order_number):
@@ -152,7 +149,6 @@ def get_order_status(request, order_number):
             'success': False,
             'message': f'Error getting order status: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(['GET'])
 @permission_classes([AllowAny])

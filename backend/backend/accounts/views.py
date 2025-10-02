@@ -20,7 +20,6 @@ from datetime import timedelta
 
 # Create your views here.
 
-
 def get_tokens_for_user(user):
     refresh = RefreshToken.for_user(user)
 
@@ -28,8 +27,6 @@ def get_tokens_for_user(user):
         'refresh': str(refresh),
         'access': str(refresh.access_token),
     }
-
-
 
 class Signup_user(APIView):
     @swagger_auto_schema(
@@ -83,8 +80,6 @@ class Signup_user(APIView):
                 }, status=status.HTTP_201_CREATED)
                 
         return Response({'message':'Signup Failed'}, status=status.HTTP_400_BAD_REQUEST)
-
-
 
 class User_login(APIView):
     @swagger_auto_schema(
@@ -146,8 +141,6 @@ class User_login(APIView):
         else:
             return Response({'message':'User no Found'}, status=status.HTTP_404_NOT_FOUND)
 
-
-
 @swagger_auto_schema(
     method='get',
     operation_description="Get current user profile",
@@ -169,7 +162,6 @@ def current_user(request):
     Profile_serializer = ProfileSerializer(profile) 
     return Response(Profile_serializer.data)
 
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_user_last_login(request):
@@ -187,7 +179,6 @@ def get_user_last_login(request):
         'is_staff': user.is_staff,
         'is_superuser': user.is_superuser
     }, status=status.HTTP_200_OK)
-
 
 @swagger_auto_schema(
     method='post',
@@ -208,7 +199,7 @@ def get_user_last_login(request):
 @permission_classes([IsAuthenticated])
 def update_profile(request, user_id):
     try:
-        # print('request  data = ', request.data)
+        
         profile = Profile.objects.get(user__id=user_id)
         update_serializer=ProfileSerializer(profile, data=request.data)
         
@@ -219,10 +210,7 @@ def update_profile(request, user_id):
             return Response({'message':'error'})
 
     except Exception as e:
-        print(e)
         return Response({'message':'Data is not Valided'})
-
-
 
 class User_Change_Password(APIView):
     permission_classes=[IsAuthenticated]
@@ -251,9 +239,6 @@ class User_Change_Password(APIView):
             return Response({'message':'Password Changed Successfully'}, status=status.HTTP_200_OK)
         else:
             return Response({'message':'Failed to Change Password'}, status=status.HTTP_400_BAD_REQUEST)
-            
-
-
 
 # class UserPasswordChangedView(APIView):
 #     def post(self, request, format=None):
@@ -262,7 +247,6 @@ class User_Change_Password(APIView):
 #         if serializer.is_valid(raise_exception=True):
 #             return Response({'message':'Password Changed Successfully'}, status=status.HTTP_200_OK)
 #         return Response({'message':'Failed to Change Password'}, status=status.HTTP_400_BAD_REQUEST)
-
 
 # Admin Users Management APIs
 class UserListView(generics.ListAPIView):
@@ -277,7 +261,6 @@ class UserListView(generics.ListAPIView):
         # Admin can see all users
         return User.objects.select_related('profile').all().order_by('-date_joined')
 
-
 class UserDetailView(generics.RetrieveUpdateAPIView):
     """
     Retrieve or update user details (admin only)
@@ -289,7 +272,6 @@ class UserDetailView(generics.RetrieveUpdateAPIView):
     def get_queryset(self):
         # Admin can access any user
         return User.objects.select_related('profile').all()
-
 
 # Admin Statistics API
 @api_view(['GET'])
@@ -354,7 +336,6 @@ def admin_statistics(request):
             'message': f'Failed to fetch statistics: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
 class EmailVerificationView(APIView):
     """
     Email verification endpoint
@@ -381,20 +362,15 @@ class EmailVerificationView(APIView):
         Verify email with token
         """
         try:
-            print(f"🔍 DEBUG: Email verification request for token: {token}")
-            
+
             # Find user by verification token (check both verified and unverified)
             user = User.objects.filter(email_verification_token=token).first()
-            print(f"🔍 DEBUG: User found: {user}")
-            
+
             if user:
-                print(f"🔍 DEBUG: User email: {user.email}")
-                print(f"🔍 DEBUG: User verification status: {user.is_email_verified}")
-                print(f"🔍 DEBUG: Token sent at: {user.email_verification_sent_at}")
-                
+
                 # Check if user is already verified
                 if user.is_email_verified:
-                    print(f"🔍 DEBUG: User is already verified")
+
                     return Response({
                         'message': 'Email is already verified! You can now log in to your account.',
                         'verified': True,
@@ -403,7 +379,7 @@ class EmailVerificationView(APIView):
                     }, status=status.HTTP_200_OK)
             
             if not user:
-                print(f"🔍 DEBUG: No user found with token: {token}")
+
                 return Response({
                     'message': 'Invalid or expired verification token',
                     'verified': False
@@ -422,8 +398,7 @@ class EmailVerificationView(APIView):
             if not user.is_email_verified:
                 user.is_email_verified = True
                 user.save()
-                print(f"🔍 DEBUG: User {user.email} email verified successfully")
-                
+
                 # Clear token after successful verification (with delay to handle race conditions)
                 import threading
                 def clear_token_after_delay():
@@ -434,10 +409,11 @@ class EmailVerificationView(APIView):
                         if user.is_email_verified:
                             user.email_verification_token = None
                             user.save()
-                            print(f"🔍 DEBUG: Token cleared for user {user.email}")
+
                     except Exception as e:
-                        print(f"🔍 DEBUG: Error clearing token: {e}")
-                
+                        # Handle any errors during email verification
+                        pass
+
                 # Run token cleanup in background
                 threading.Thread(target=clear_token_after_delay, daemon=True).start()
                 
@@ -448,7 +424,7 @@ class EmailVerificationView(APIView):
                     'redirect_url': '/email-verified'
                 }, status=status.HTTP_200_OK)
             else:
-                print(f"🔍 DEBUG: User {user.email} already verified")
+
                 return Response({
                     'message': 'Email is already verified! You can now log in to your account.',
                     'verified': True,
@@ -461,7 +437,6 @@ class EmailVerificationView(APIView):
                 'message': f'Error verifying email: {str(e)}',
                 'verified': False
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 class ResendVerificationEmailView(APIView):
     """
@@ -497,12 +472,7 @@ class ResendVerificationEmailView(APIView):
         """
         try:
             email = request.data.get('email')
-            print(f"🔍 DEBUG: Resend verification request data: {request.data}")
-            print(f"🔍 DEBUG: Email from request: {email}")
-            print(f"🔍 DEBUG: Email type: {type(email)}")
-            print(f"🔍 DEBUG: Email length: {len(email) if email else 'None'}")
-            print(f"🔍 DEBUG: Email repr: {repr(email)}")
-            
+
             if not email:
                 return Response({
                     'message': 'Email is required',
@@ -511,11 +481,7 @@ class ResendVerificationEmailView(APIView):
             
             # Find user by email (case insensitive)
             user = User.objects.filter(email__iexact=email).first()
-            print(f"🔍 DEBUG: User found: {user}")
-            print(f"🔍 DEBUG: User email: {user.email if user else 'None'}")
-            print(f"🔍 DEBUG: User verification status: {user.is_email_verified if user else 'None'}")
-            print(f"🔍 DEBUG: All users with similar email: {list(User.objects.filter(email__icontains=email.split('@')[0]).values_list('email', flat=True))}")
-            
+
             if not user:
                 return Response({
                     'message': 'User not found',
@@ -556,10 +522,4 @@ class ResendVerificationEmailView(APIView):
                 'message': f'Error sending verification email: {str(e)}',
                 'email_sent': False
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-
-
-
-
 

@@ -8,7 +8,6 @@ Custom middleware for handling session cookies and CORS.
 from django.utils.deprecation import MiddlewareMixin
 from django.conf import settings
 
-
 class SessionCookieMiddleware(MiddlewareMixin):
     """
     Middleware to ensure session cookies are properly set
@@ -21,6 +20,10 @@ class SessionCookieMiddleware(MiddlewareMixin):
         return None
     
     def process_response(self, request, response):
+        # Skip for Django admin panel to avoid conflicts
+        if request.path.startswith('/admin/'):
+            return response
+        
         # Add session cookie headers for cross-origin requests
         if hasattr(request, 'session') and request.session.session_key:
             # Set session cookie with proper attributes
@@ -37,13 +40,16 @@ class SessionCookieMiddleware(MiddlewareMixin):
         
         return response
 
-
 class CORSHeadersMiddleware(MiddlewareMixin):
     """
     Middleware to add CORS headers for session cookies
     """
     
     def process_response(self, request, response):
+        # Skip for Django admin panel to avoid conflicts
+        if request.path.startswith('/admin/'):
+            return response
+        
         # Add CORS headers for credentials
         response['Access-Control-Allow-Credentials'] = 'true'
         origin = request.META.get('HTTP_ORIGIN')

@@ -15,7 +15,6 @@ from ...serializers import (
 
 User = get_user_model()
 
-
 class MessageViewSet(viewsets.ModelViewSet):
     """ViewSet for managing messages"""
     permission_classes = [IsAuthenticated]
@@ -76,13 +75,12 @@ class MessageViewSet(viewsets.ModelViewSet):
                             updated_count += 1
                         
                         # Reset unread count for the conversation
-                        print(f"MarkMessagesAsRead - Before reset: unread_user_count={conversation.unread_user_count}, unread_staff_count={conversation.unread_staff_count}")
+
                         if user.is_staff or user.is_superuser:
                             conversation.reset_unread_count(is_staff=True)
                         else:
                             conversation.reset_unread_count(is_staff=False)
-                        print(f"MarkMessagesAsRead - After reset: unread_user_count={conversation.unread_user_count}, unread_staff_count={conversation.unread_staff_count}")
-                        
+
                         return Response({
                             'message': f'{updated_count} messages marked as read in conversation',
                             'updated_count': updated_count
@@ -141,11 +139,9 @@ class MessageViewSet(viewsets.ModelViewSet):
         else:
             unread_count = sum(conv.unread_user_count for conv in conversations)
         
-        # print(f"Unread count API - User: {user.email}, Is staff: {user.is_staff}, Conversations: {len(conversations)}")
         for conv in conversations:
-            print(f"Conversation {conv.id}: unread_user_count={conv.unread_user_count}, unread_staff_count={conv.unread_staff_count}")
-        # print(f"Total unread count: {unread_count}")
-        
+            pass
+
         return Response({'unread_count': unread_count})
     
     @action(detail=False, methods=['get'])
@@ -161,7 +157,6 @@ class MessageViewSet(viewsets.ModelViewSet):
         
         serializer = MessageListSerializer(recent_messages, many=True)
         return Response(serializer.data)
-
 
 class MessageMarkReadView(viewsets.GenericViewSet):
     """View for marking messages as read"""

@@ -26,7 +26,6 @@ from .email_serializers import (
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
-
 class EmailSettingsListCreateView(generics.ListCreateAPIView):
     """
     List and create email settings
@@ -62,7 +61,6 @@ class EmailSettingsListCreateView(generics.ListCreateAPIView):
     
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
-
 
 class EmailSettingsDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
@@ -109,7 +107,6 @@ class EmailSettingsDetailView(generics.RetrieveUpdateDestroyAPIView):
         # Allow deleting even if it's the only active; user explicitly chose delete
         instance.delete()
 
-
 class EmailTemplateListCreateView(generics.ListCreateAPIView):
     """
     List and create email templates
@@ -127,7 +124,6 @@ class EmailTemplateListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
 
-
 class EmailTemplateDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
     Retrieve, update, or delete email templates
@@ -137,7 +133,6 @@ class EmailTemplateDetailView(generics.RetrieveUpdateDestroyAPIView):
     
     def get_queryset(self):
         return EmailTemplate.objects.filter(created_by=self.request.user)
-
 
 class EmailLogListView(generics.ListAPIView):
     """
@@ -151,17 +146,16 @@ class EmailLogListView(generics.ListAPIView):
             user=self.request.user
         ).order_by('-created_at')[:100]  # Limit to last 100 logs
 
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def test_smtp_connection(request):
     """
     Test SMTP connection with provided credentials
     """
-    # Removed debug print
+    
     serializer = SMTPTestSerializer(data=request.data)
     if not serializer.is_valid():
-        # Removed debug print
+        
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     data = serializer.validated_data
@@ -224,7 +218,6 @@ def test_smtp_connection(request):
             'success': False,
             'message': f'Unexpected error: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -300,7 +293,6 @@ def test_email_settings(request, pk):
             'success': False,
             'message': f'Test failed: {str(e)}'
         }, status=status.HTTP_400_BAD_REQUEST)
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -411,7 +403,6 @@ def send_test_email(request):
             'message': f'Failed to send email: {str(e)}'
         }, status=status.HTTP_400_BAD_REQUEST)
 
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def bulk_update_email_settings(request):
@@ -473,7 +464,6 @@ def bulk_update_email_settings(request):
             'message': f'Bulk update failed: {str(e)}'
         }, status=status.HTTP_400_BAD_REQUEST)
 
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def preview_email_template(request):
@@ -513,7 +503,6 @@ def preview_email_template(request):
             'success': False,
             'message': f'Preview failed: {str(e)}'
         }, status=status.HTTP_400_BAD_REQUEST)
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -557,7 +546,6 @@ def get_active_email_settings(request):
             'success': False,
             'message': f'Failed to get active email settings: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

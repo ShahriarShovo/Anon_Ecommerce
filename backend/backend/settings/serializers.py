@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from .models import Logo, Banner
 
-
 class LogoSerializer(serializers.ModelSerializer):
     """Serializer for Logo model"""
     logo_url = serializers.ReadOnlyField()
@@ -13,7 +12,6 @@ class LogoSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
-
 
 class LogoCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating/updating Logo"""
@@ -33,7 +31,6 @@ class LogoCreateSerializer(serializers.ModelSerializer):
             Logo.objects.filter(is_active=True).exclude(id=instance.id).update(is_active=False)
         return super().update(instance, validated_data)
 
-
 class ActiveLogoSerializer(serializers.ModelSerializer):
     """Serializer for getting active logo (public endpoint)"""
     logo_url = serializers.ReadOnlyField()
@@ -41,7 +38,6 @@ class ActiveLogoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Logo
         fields = ['id', 'name', 'logo_url', 'created_at']
-
 
 class BannerSerializer(serializers.ModelSerializer):
     """Serializer for Banner model"""
@@ -55,7 +51,6 @@ class BannerSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
-
 class BannerCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating/updating Banner"""
     
@@ -68,7 +63,6 @@ class BannerCreateSerializer(serializers.ModelSerializer):
     
     def update(self, instance, validated_data):
         return super().update(instance, validated_data)
-
 
 class ActiveBannerSerializer(serializers.ModelSerializer):
     """Serializer for getting active banners (public endpoint)"""

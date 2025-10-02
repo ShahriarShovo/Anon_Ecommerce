@@ -1,7 +1,6 @@
 from django.db import models
 from django.utils import timezone
 
-
 class Contact(models.Model):
     """
     Contact form submissions model

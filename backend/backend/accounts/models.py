@@ -89,7 +89,6 @@ class Profile(models.Model):
     #             return False
     #     return True
 
-
 @receiver(post_save, sender=User)
 
 def create_profile(sender, instance, created, **kwargs):

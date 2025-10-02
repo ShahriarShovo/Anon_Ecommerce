@@ -9,7 +9,6 @@ from .email_model import EmailSettings, EmailTemplate, EmailLog
 # Import footer models
 from .footer_settings_model import FooterSettings, SocialMediaLink
 
-
 class Logo(models.Model):
     """
     Model to store site logo information
@@ -34,7 +33,6 @@ class Logo(models.Model):
         if self.logo_image:
             return self.logo_image.url
         return None
-
 
 class Banner(models.Model):
     """
@@ -80,12 +78,10 @@ class Banner(models.Model):
                 
                 # Save the resized image
                 img.save(self.banner_image.path, quality=85, optimize=True)
-                
-                print(f"Banner {self.name} resized to {STANDARD_WIDTH}x{STANDARD_HEIGHT}")
-                
+
             except Exception as e:
-                print(f"Error resizing banner {self.name}: {str(e)}")
-    
+                pass
+
     @classmethod
     def get_active_banners(cls):
         """Get all active banners ordered by display_order"""

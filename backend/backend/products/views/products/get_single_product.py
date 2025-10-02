@@ -7,7 +7,6 @@ from django.shortcuts import get_object_or_404
 from products.models import Product, ProductImage, ProductVariant
 from products.serializers import ProductDetailSerializer
 
-
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_single_product(request, slug):
@@ -16,8 +15,7 @@ def get_single_product(request, slug):
     Returns: Complete product information with images and variants
     """
     try:
-        
-        
+
         # Get product with related data
         product = get_object_or_404(
             Product.objects.select_related('category', 'subcategory')
@@ -25,8 +23,7 @@ def get_single_product(request, slug):
             slug=slug,
             status='active'
         )
-        
-        
+
         # Use ProductDetailSerializer to get all fields including display_price
         serializer = ProductDetailSerializer(product)
         product_data = serializer.data
@@ -41,8 +38,7 @@ def get_single_product(request, slug):
         product_data['primary_image'] = product_data['images'][0] if product_data['images'] else None
         product_data['total_images'] = len(product_data['images'])
         product_data['total_variants'] = len(product_data['variants'])
-        
-        
+
         return Response({
             'success': True,
             'product': product_data

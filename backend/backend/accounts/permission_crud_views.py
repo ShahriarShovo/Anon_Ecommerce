@@ -8,7 +8,6 @@ from .permission_serializers import PermissionSerializer
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
-
 class PermissionCreateView(generics.CreateAPIView):
     """Create new custom permission"""
     queryset = Permission.objects.all()
@@ -38,7 +37,6 @@ class PermissionCreateView(generics.CreateAPIView):
             'message': 'Validation error',
             'errors': serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
-
 
 class PermissionUpdateView(generics.UpdateAPIView):
     """Update existing permission"""
@@ -79,7 +77,6 @@ class PermissionUpdateView(generics.UpdateAPIView):
                 'message': 'Permission not found'
             }, status=status.HTTP_404_NOT_FOUND)
 
-
 class PermissionDeleteView(generics.DestroyAPIView):
     """Delete permission (soft delete)"""
     queryset = Permission.objects.all()
@@ -109,7 +106,6 @@ class PermissionDeleteView(generics.DestroyAPIView):
                 'message': 'Permission not found'
             }, status=status.HTTP_404_NOT_FOUND)
 
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 @swagger_auto_schema(
@@ -134,7 +130,6 @@ def get_permission_details(request, permission_id):
             'success': False,
             'message': 'Permission not found'
         }, status=status.HTTP_404_NOT_FOUND)
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])

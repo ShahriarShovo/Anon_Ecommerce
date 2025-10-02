@@ -21,7 +21,6 @@
 
 # User = get_user_model()
 
-
 # class DiscountViewSet(viewsets.ModelViewSet):
 #     """ViewSet for managing discounts"""
 #     serializer_class = DiscountSerializer
@@ -214,29 +213,21 @@
 #     def get_active_discounts_for_display(self, request):
 #         """Get active discounts that should be displayed in notifications"""
 #         now = timezone.now()
-#         print(f"Discount API: Getting active discounts for display at {now}")
-        
+
 #         # Get all discounts first
 #         all_discounts = Discount.objects.all()
-#         print(f"Discount API: Total discounts in database: {all_discounts.count()}")
         
 #         # Debug: Check each discount
 #         for discount in all_discounts:
-#             print(f"Discount API: - {discount.name} (status: {discount.status}, show_in_notifications: {discount.show_in_notifications}, valid_from: {discount.valid_from})")
         
 #         # Filter active discounts
-#         print(f"Discount API: Current time: {now}")
-#         print(f"Discount API: Timezone: {now.tzinfo}")
-        
+
 #         # Check each condition separately
 #         status_active = Discount.objects.filter(status='active')
-#         print(f"Discount API: Status active count: {status_active.count()}")
         
 #         valid_from_ok = Discount.objects.filter(valid_from__lte=now)
-#         print(f"Discount API: Valid from OK count: {valid_from_ok.count()}")
         
 #         show_notifications = Discount.objects.filter(show_in_notifications=True)
-#         print(f"Discount API: Show notifications count: {show_notifications.count()}")
         
 #         discounts = Discount.objects.filter(
 #             status='active',
@@ -246,9 +237,7 @@
 #             Q(valid_until__isnull=True) | Q(valid_until__gt=now)
 #         ).order_by('-percentage', '-created_at')
         
-#         print(f"Discount API: Active discounts found: {discounts.count()}")
 #         for discount in discounts:
-#             print(f"Discount API: - {discount.name} (status: {discount.status}, show_in_notifications: {discount.show_in_notifications}, display_type: {discount.display_type})")
         
 #         # Convert to notification format
 #         notifications = []
@@ -270,7 +259,7 @@
 #                 'modal_button_text': discount.modal_button_text
 #             })
         
-#         print(f"Discount API: Returning {len(notifications)} notifications")
+} notifications")
 #         return Response(notifications)
     
 #     def get_client_ip(self, request):
@@ -281,7 +270,6 @@
 #         else:
 #             ip = request.META.get('REMOTE_ADDR')
 #         return ip
-
 
 # class DiscountUsageViewSet(viewsets.ReadOnlyModelViewSet):
 #     """ViewSet for viewing discount usage"""

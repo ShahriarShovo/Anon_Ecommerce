@@ -9,7 +9,6 @@ from drf_yasg import openapi
 from products.models import Product
 from products.serializers import ProductListSerializer
 
-
 class SearchViewSet(viewsets.ViewSet):
     """
     Search functionality for products

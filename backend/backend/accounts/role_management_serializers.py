@@ -1,9 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 
-
 User = get_user_model()
-
 
 class AdminStaffUserSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(source='profile.full_name', read_only=True)
@@ -37,7 +35,6 @@ class AdminStaffUserSerializer(serializers.ModelSerializer):
             return bd_dt.strftime('%Y-%m-%d %I:%M:%S %p')
         return 'Never'
 
-
 class SetUserRoleSerializer(serializers.Serializer):
     is_staff = serializers.BooleanField(required=False)
     is_superuser = serializers.BooleanField(required=False)
@@ -46,7 +43,6 @@ class SetUserRoleSerializer(serializers.Serializer):
         if 'is_staff' not in attrs and 'is_superuser' not in attrs:
             raise serializers.ValidationError('Provide at least one of is_staff or is_superuser')
         return attrs
-
 
 class CreateAdminUserSerializer(serializers.Serializer):
     email = serializers.EmailField()

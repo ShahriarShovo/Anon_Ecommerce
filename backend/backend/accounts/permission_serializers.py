@@ -4,12 +4,10 @@ from .permission_models import Permission, Role, RolePermission, UserRole, UserP
 
 User = get_user_model()
 
-
 class PermissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Permission
         fields = ['id', 'name', 'codename', 'description', 'category', 'is_active', 'created_at']
-
 
 class RoleSerializer(serializers.ModelSerializer):
     permission_count = serializers.SerializerMethodField()
@@ -25,7 +23,6 @@ class RoleSerializer(serializers.ModelSerializer):
     def get_user_count(self, obj):
         return obj.role_users.count()
 
-
 class RoleDetailSerializer(serializers.ModelSerializer):
     permissions = PermissionSerializer(source='role_permissions.permission', many=True, read_only=True)
     users = serializers.SerializerMethodField()
@@ -38,7 +35,6 @@ class RoleDetailSerializer(serializers.ModelSerializer):
         users = obj.role_users.all()
         return [{'id': user.user.id, 'email': user.user.email, 'full_name': getattr(user.user.profile, 'full_name', '')} for user in users]
 
-
 class RolePermissionSerializer(serializers.ModelSerializer):
     permission_name = serializers.CharField(source='permission.name', read_only=True)
     permission_codename = serializers.CharField(source='permission.codename', read_only=True)
@@ -46,7 +42,6 @@ class RolePermissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = RolePermission
         fields = ['id', 'permission', 'permission_name', 'permission_codename', 'created_at']
-
 
 class UserRoleSerializer(serializers.ModelSerializer):
     role_name = serializers.CharField(source='role.name', read_only=True)
@@ -56,7 +51,6 @@ class UserRoleSerializer(serializers.ModelSerializer):
         model = UserRole
         fields = ['id', 'role', 'role_name', 'assigned_by', 'assigned_by_email', 'created_at']
 
-
 class UserPermissionSerializer(serializers.ModelSerializer):
     permission_name = serializers.CharField(source='permission.name', read_only=True)
     permission_codename = serializers.CharField(source='permission.codename', read_only=True)
@@ -65,7 +59,6 @@ class UserPermissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserPermission
         fields = ['id', 'permission', 'permission_name', 'permission_codename', 'granted_by', 'granted_by_email', 'created_at']
-
 
 class UserPermissionAssignmentSerializer(serializers.Serializer):
     """Serializer for assigning permissions to users"""
@@ -94,7 +87,6 @@ class UserPermissionAssignmentSerializer(serializers.Serializer):
                 raise serializers.ValidationError("Some roles do not exist or are inactive")
         return value
 
-
 class UserPermissionListSerializer(serializers.ModelSerializer):
     """Serializer for listing user permissions"""
     full_name = serializers.CharField(source='profile.full_name', read_only=True)
@@ -122,7 +114,6 @@ class UserPermissionListSerializer(serializers.ModelSerializer):
         # Combine both
         all_permissions = role_permissions.union(direct_permissions)
         return list(all_permissions)
-
 
 class PermissionCheckSerializer(serializers.Serializer):
     """Serializer for checking user permissions"""

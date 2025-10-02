@@ -1,7 +1,6 @@
 from django.contrib import admin
 from cart.models import Cart, CartItem, Wishlist, WishlistItem
 
-
 @admin.register(Cart)
 class CartAdmin(admin.ModelAdmin):
     """Admin interface for Cart model"""
@@ -16,7 +15,6 @@ class CartAdmin(admin.ModelAdmin):
     
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user')
-
 
 @admin.register(CartItem)
 class CartItemAdmin(admin.ModelAdmin):
@@ -40,7 +38,6 @@ class CartItemAdmin(admin.ModelAdmin):
         return f"৳{obj.get_total_price():.2f}"
     get_total_price.short_description = 'Total Price'
 
-
 @admin.register(Wishlist)
 class WishlistAdmin(admin.ModelAdmin):
     """Admin interface for Wishlist model"""
@@ -60,7 +57,6 @@ class WishlistAdmin(admin.ModelAdmin):
         """Display total items in wishlist"""
         return obj.get_total_items()
     get_total_items.short_description = 'Total Items'
-
 
 @admin.register(WishlistItem)
 class WishlistItemAdmin(admin.ModelAdmin):

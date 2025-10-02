@@ -30,7 +30,6 @@ from cart.serializers import (
 )
 from products.models import Product, ProductVariant
 
-
 def get_or_create_cart(request):
     """
     Get or create cart for user/session
@@ -61,7 +60,6 @@ def get_or_create_cart(request):
     
     return cart
 
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])  # Only authenticated users can add to cart
 def add_to_cart(request):
@@ -88,14 +86,12 @@ def add_to_cart(request):
     }
     """
     try:
-        # print(f"🔍 ADD_TO_CART: add_to_cart API called - User: {request.user}, Session: {request.session.session_key}")
-        # print(f"🔍 ADD_TO_CART: Request data: {request.data}")
-        
+
         # Validate request data
-        # print(f"🛒 Backend: Add to cart request data: {request.data}")
+        
         serializer = AddToCartSerializer(data=request.data)
         if not serializer.is_valid():
-            # print(f"🛒 Backend: Validation failed: {serializer.errors}")
+            
             return Response({
                 'success': False,
                 'error': 'Invalid data',
@@ -117,8 +113,7 @@ def add_to_cart(request):
         cart = get_or_create_cart(request)
         
         # Debug: Log cart details
-        # print(f"🛒 Backend: Add to cart - Cart ID: {cart.id}, Session Key: {cart.session_key}, User: {cart.user}")
-        
+
         # Check if item already exists in cart
         existing_item = CartItem.objects.filter(
             cart=cart,
@@ -185,7 +180,6 @@ def add_to_cart(request):
             'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
 @api_view(['DELETE'])
 @permission_classes([AllowAny])  # Allow both authenticated and guest users
 def remove_cart_item(request, item_id):
@@ -205,18 +199,15 @@ def remove_cart_item(request, item_id):
     }
     """
     try:
-        # print(f"🛒 Backend: Remove cart item - Item ID: {item_id}")
-        
+
         # Get cart item
         cart_item = get_object_or_404(CartItem, id=item_id)
-        # print(f"🛒 Backend: Found cart item: {cart_item.id}, Product: {cart_item.product.title}")
-        
+
         # Verify cart ownership
         cart = get_or_create_cart(request)
-        # print(f"🛒 Backend: Cart ID: {cart.id}, Session Key: {cart.session_key}, User: {cart.user}")
-        
+
         if cart_item.cart != cart:
-            # print(f"🛒 Backend: Cart ownership mismatch - Item cart: {cart_item.cart.id}, User cart: {cart.id}")
+            
             return Response({
                 'success': False,
                 'error': 'Cart item not found in your cart'
@@ -224,7 +215,7 @@ def remove_cart_item(request, item_id):
         
         with transaction.atomic():
             # Delete the item
-            # print(f"🛒 Backend: Deleting cart item: {cart_item.id}")
+            
             cart_item.delete()
             
             # Check if cart should be deleted (for guest users)
@@ -233,7 +224,7 @@ def remove_cart_item(request, item_id):
             if not cart_deleted:
                 # Update cart totals (for authenticated users)
                 cart.calculate_totals()
-                # print(f"🛒 Backend: Cart totals updated - Total items: {cart.total_items}, Subtotal: {cart.subtotal}")
+                
             else:
                 pass
         # Handle response based on whether cart was deleted
@@ -247,7 +238,6 @@ def remove_cart_item(request, item_id):
         else:
             # Cart still exists (authenticated user)
             cart_serializer = CartSerializer(cart)
-            # print(f"🛒 Backend: Remove successful - Returning cart with {len(cart_serializer.data.get('items', []))} items")
             
             return Response({
                 'success': True,
@@ -255,7 +245,6 @@ def remove_cart_item(request, item_id):
                 'cart': cart_serializer.data
             }, status=status.HTTP_200_OK)
     except Exception as e:
-        # print(f"🛒 Backend: Remove cart item error: {str(e)}")
         return Response({
             'success': False,
             'error': str(e)
@@ -329,7 +318,6 @@ def increase_cart_item_quantity(request, item_id):
             'success': False,
             'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(['POST'])
 @permission_classes([AllowAny])  # Allow both authenticated and guest users
@@ -415,7 +403,6 @@ def decrease_cart_item_quantity(request, item_id):
             'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])  # Only authenticated users can view cart
 def get_cart(request):
@@ -448,9 +435,7 @@ def get_cart(request):
                     'subtotal': 0.00
                 }
             }, status=status.HTTP_200_OK)
-        
-        
-        
+
         # Check if there are any items in cart
         if cart.items.count() > 0:
             for item in cart.items.all():
@@ -479,7 +464,6 @@ def get_cart(request):
             'success': False,
             'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(['DELETE'])
 @permission_classes([AllowAny])  # Allow both authenticated and guest users

@@ -18,7 +18,6 @@ from django.db import transaction
 from cart.models import Cart
 from cart.serializers import CartSerializer
 
-
 def get_or_create_cart(request):
     """
     Get or create cart for user/session
@@ -56,7 +55,6 @@ def get_or_create_cart(request):
         )
     
     return cart
-
 
 @api_view(['DELETE'])
 @permission_classes([AllowAny])  # Allow both authenticated and guest users

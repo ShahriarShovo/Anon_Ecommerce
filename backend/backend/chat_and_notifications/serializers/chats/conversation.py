@@ -4,7 +4,6 @@ from ...models import Conversation, Message
 
 User = get_user_model()
 
-
 class ConversationSerializer(serializers.ModelSerializer):
     """Full conversation serializer with all details"""
     customer_name = serializers.CharField(source='customer.profile.full_name', read_only=True)
@@ -48,7 +47,6 @@ class ConversationSerializer(serializers.ModelSerializer):
                 return obj.unread_user_count
         return 0
 
-
 class ConversationListSerializer(serializers.ModelSerializer):
     """Simplified conversation serializer for list views"""
     customer_name = serializers.CharField(source='customer.profile.full_name', read_only=True)
@@ -91,7 +89,6 @@ class ConversationListSerializer(serializers.ModelSerializer):
                 return obj.unread_user_count
         return 0
 
-
 class ConversationCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating new conversations"""
     
@@ -116,7 +113,6 @@ class ConversationCreateSerializer(serializers.ModelSerializer):
         )
         
         return conversation
-
 
 class ConversationUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating conversations"""

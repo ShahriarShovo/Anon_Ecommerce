@@ -12,7 +12,6 @@ from ...models.orders.order import Order
 
 User = get_user_model()
 
-
 class OrderWebSocketConsumer(AsyncJsonWebsocketConsumer):
     """WebSocket consumer for real-time order management"""
     
@@ -23,17 +22,17 @@ class OrderWebSocketConsumer(AsyncJsonWebsocketConsumer):
     
     async def connect(self):
         """Handle WebSocket connection"""
-        print(f"Order WebSocket: Connection attempt - User: {self.scope.get('user')}")
+
         self.user = self.scope.get('user')
         
         if isinstance(self.user, AnonymousUser):
-            print("Order WebSocket: Connection rejected - User not authenticated")
+
             await self.close()
             return
         
         # Check if user is staff/admin
         if not (self.user.is_staff or self.user.is_superuser):
-            print("Order WebSocket: Connection rejected - User not staff/admin")
+
             await self.close()
             return
         
@@ -46,9 +45,7 @@ class OrderWebSocketConsumer(AsyncJsonWebsocketConsumer):
         )
         
         await self.accept()
-        
-        print(f"Order WebSocket: Connection established for user: {self.user.email}")
-        
+
         # Send connection confirmation
         await self.send_json({
             'type': 'order_connection_established',
@@ -163,18 +160,17 @@ class OrderWebSocketConsumer(AsyncJsonWebsocketConsumer):
             })
         return result
 
-
 # Order model signals for real-time notifications
 @receiver(post_save, sender=Order)
 def order_created_or_updated(sender, instance, created, **kwargs):
     """Signal handler for order create/update"""
-    print(f"Order Signal: Order {'created' if created else 'updated'} - ID: {instance.id}, Status: {instance.status}")
+
     from channels.layers import get_channel_layer
     import asyncio
     
     channel_layer = get_channel_layer()
     if not channel_layer:
-        print("Order Signal: No channel layer available")
+
         return
     
     # Prepare order data
@@ -210,7 +206,7 @@ def order_created_or_updated(sender, instance, created, **kwargs):
     
     # Send to admin orders group
     async def send_notification():
-        print(f"Order Signal: Sending {'new_order' if created else 'order_updated'} notification")
+
         if created:
             await channel_layer.group_send(
                 'admin_orders',
@@ -245,13 +241,12 @@ def order_created_or_updated(sender, instance, created, **kwargs):
         else:
             loop.run_until_complete(send_notification())
     except Exception as e:
-        print(f"Error sending order notification: {e}")
-
+        pass
 
 @receiver(post_save, sender=Order)
 def order_status_changed(sender, instance, **kwargs):
     """Signal handler for order status changes"""
-    print(f"Order Signal: Status change detected for Order ID: {instance.id}")
+
     from channels.layers import get_channel_layer
     import asyncio
     
@@ -291,7 +286,7 @@ def order_status_changed(sender, instance, **kwargs):
         
         # Send to admin orders group
         async def send_status_notification():
-            print(f"Order Signal: Sending order_status_changed notification for Order ID: {instance.id}")
+
             await channel_layer.group_send(
                 'admin_orders',
                 {
@@ -316,8 +311,7 @@ def order_status_changed(sender, instance, **kwargs):
             else:
                 loop.run_until_complete(send_status_notification())
         except Exception as e:
-            print(f"Error sending order status notification: {e}")
-
+            pass
 
 # Override Order.save to track status changes
 def track_status_change(sender, instance, **kwargs):

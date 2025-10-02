@@ -1,7 +1,6 @@
 from django.core.management.base import BaseCommand
 from orders.models.payments.payment_method import PaymentMethod
 
-
 class Command(BaseCommand):
     help = 'Create default payment methods'
 

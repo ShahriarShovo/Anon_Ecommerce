@@ -1,7 +1,6 @@
 from django.db import models
 from orders.models.orders.order import Order
 
-
 class Invoice(models.Model):
     """
     Invoice model for order invoices

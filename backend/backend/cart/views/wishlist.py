@@ -25,7 +25,6 @@ from cart.serializers import (
 )
 from products.models import Product, ProductVariant
 
-
 def get_or_create_wishlist(user):
     """
     Get or create wishlist for authenticated user
@@ -43,7 +42,6 @@ def get_or_create_wishlist(user):
         defaults={'is_active': True}
     )
     return wishlist
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])  # Only authenticated users can have wishlists
@@ -145,7 +143,6 @@ def add_to_wishlist(request):
             'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])  # Only authenticated users
 def remove_from_wishlist(request, item_id):
@@ -188,7 +185,6 @@ def remove_from_wishlist(request, item_id):
             'success': False,
             'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])  # Only authenticated users

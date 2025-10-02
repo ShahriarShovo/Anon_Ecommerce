@@ -46,12 +46,12 @@ class JWTAuthMiddleware(BaseMiddleware):
                 user_id = access_token['user_id']
                 user = await self.get_user(user_id)
                 scope['user'] = user
-                print(f"WebSocket authentication successful for user: {user.email}")
+
             except (InvalidToken, TokenError, KeyError) as e:
-                print(f"WebSocket authentication failed: {e}")
+
                 scope['user'] = AnonymousUser()
         else:
-            print("No token provided for WebSocket connection")
+
             scope['user'] = AnonymousUser()
         
         return await super().__call__(scope, receive, send)

@@ -60,8 +60,7 @@ class ProductVariant(models.Model):
         default='kg',
         help_text="Weight unit"
     )
-    
-    
+
     # Status
     position = models.PositiveIntegerField(default=1, help_text="Display position")
     is_active = models.BooleanField(default=True, help_text="Is this variant active?")
@@ -82,7 +81,8 @@ class ProductVariant(models.Model):
         ]
     
     def save(self, *args, **kwargs):
-        if not self.sku:
+        # Only generate SKU if not already provided
+        if not self.sku and hasattr(self, 'product') and self.product:
             # Generate SKU from product title and variant options
             base_sku = slugify(self.product.title)[:10].upper()
             option_parts = []
@@ -96,7 +96,20 @@ class ProductVariant(models.Model):
             if option_parts:
                 self.sku = f"{base_sku}-{'-'.join(option_parts)}"
             else:
-                self.sku = f"{base_sku}-{self.id or 'NEW'}"
+                # Generate unique SKU using microsecond timestamp and random number
+                import time
+                import random
+                # Use microsecond timestamp for better uniqueness
+                timestamp = str(int(time.time() * 1000000))[-8:]  # Last 8 digits of microsecond timestamp
+                random_num = str(random.randint(1000, 9999))  # 4-digit random number
+                self.sku = f"{base_sku}-{timestamp}{random_num}"
+                
+                # Ensure SKU is unique by checking database
+                counter = 1
+                original_sku = self.sku
+                while ProductVariant.objects.filter(sku=self.sku).exists():
+                    self.sku = f"{original_sku}-{counter}"
+                    counter += 1
         
         super().save(*args, **kwargs)
     
@@ -172,14 +185,39 @@ class ProductVariant(models.Model):
     
     def set_dynamic_options(self, options_list):
         """Set dynamic options from a list of dictionaries"""
+        print(f"Setting dynamic options for variant {self.id}: {options_list}")
+        
         # Clear existing dynamic options
         self.dynamic_options.all().delete()
         
-        # Add new options
+        # Deduplicate options based on name and value combination
+        seen_options = set()
+        unique_options = []
+        
         for i, option in enumerate(options_list):
             if option.get('name') and option.get('value'):
+                # Create a unique key for deduplication
+                option_key = (option['name'], option['value'])
+                
+                if option_key not in seen_options:
+                    seen_options.add(option_key)
+                    unique_options.append(option)
+                    print(f"Added unique option: name='{option['name']}', value='{option['value']}'")
+                else:
+                    print(f"Skipping duplicate option: name='{option['name']}', value='{option['value']}'")
+        
+        print(f"Unique options after deduplication: {len(unique_options)} out of {len(options_list)}")
+        
+        # Add unique options
+        for i, option in enumerate(unique_options):
+            print(f"Creating option: name='{option['name']}', value='{option['value']}', position={option.get('position', i + 1)}")
+            try:
                 self.dynamic_options.create(
                     name=option['name'],
                     value=option['value'],
                     position=option.get('position', i + 1)
                 )
+                print(f"Successfully created option")
+            except Exception as e:
+                print(f"Error creating option: {e}")
+                raise

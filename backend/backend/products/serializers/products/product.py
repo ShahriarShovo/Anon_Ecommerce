@@ -224,6 +224,9 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(f"Variant {i} must be a dictionary")
             
             # Validate required fields
+            if 'title' not in variant_data or not variant_data['title']:
+                raise serializers.ValidationError(f"Variant {i} must have a title")
+            
             if 'price' not in variant_data or not variant_data['price']:
                 raise serializers.ValidationError(f"Variant {i} must have a price")
             
@@ -308,6 +311,46 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
         
         return validated_options
 
+    def _generate_unique_sku(self, product, variant_data):
+        """Generate a unique SKU for a variant"""
+        from django.utils.text import slugify
+        import time
+        import random
+        
+        # Generate base SKU from product title
+        base_sku = slugify(product.title)[:10].upper()
+        print(f"Base SKU: {base_sku}")
+        
+        # Check if variant has option values
+        option_parts = []
+        if variant_data.get('option1_value'):
+            option_parts.append(slugify(variant_data['option1_value'])[:3].upper())
+        if variant_data.get('option2_value'):
+            option_parts.append(slugify(variant_data['option2_value'])[:3].upper())
+        if variant_data.get('option3_value'):
+            option_parts.append(slugify(variant_data['option3_value'])[:3].upper())
+        
+        if option_parts:
+            sku = f"{base_sku}-{'-'.join(option_parts)}"
+            print(f"SKU with options: {sku}")
+        else:
+            # Generate unique SKU using microsecond timestamp and random number
+            timestamp = str(int(time.time() * 1000000))[-8:]  # Last 8 digits of microsecond timestamp
+            random_num = str(random.randint(1000, 9999))  # 4-digit random number
+            sku = f"{base_sku}-{timestamp}{random_num}"
+            print(f"SKU with timestamp: {sku}")
+        
+        # Ensure SKU is unique by checking database
+        counter = 1
+        original_sku = sku
+        while ProductVariant.objects.filter(sku=sku).exists():
+            sku = f"{original_sku}-{counter}"
+            counter += 1
+            print(f"SKU collision, trying: {sku}")
+        
+        print(f"Final SKU: {sku}")
+        return sku
+
     def create(self, validated_data):
         uploaded_images = validated_data.pop('uploaded_images', [])
         variants_data = validated_data.pop('variants', [])
@@ -353,22 +396,35 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
                         product.set_default_variant(default_variant)
             
             # Create variants with dynamic options
-            for variant_data in variants_data:
+            for i, variant_data in enumerate(variants_data):
+                print(f"Processing variant {i}: {variant_data}")
                 dynamic_options_data = variant_data.pop('dynamic_options', [])
+                print(f"Dynamic options for variant {i}: {dynamic_options_data}")
                 
                 try:
                     # Remove any None or empty string values for optional fields
+                    # Also remove read-only fields that shouldn't be set during creation
+                    read_only_fields = ['is_in_stock', 'display_price', 'discount_percentage', 'option_values', 'option_names', 'all_options', 'dynamic_options']
                     cleaned_variant_data = {}
                     for key, value in variant_data.items():
-                        if value is not None and value != '':
+                        if key not in read_only_fields and value is not None and value != '':
                             cleaned_variant_data[key] = value
                     
+                    print(f"Cleaned variant data: {cleaned_variant_data}")
+                    
+                    # Generate unique SKU before creating the variant
+                    if 'sku' not in cleaned_variant_data or not cleaned_variant_data['sku']:
+                        cleaned_variant_data['sku'] = self._generate_unique_sku(product, cleaned_variant_data)
+                        print(f"Generated SKU: {cleaned_variant_data['sku']}")
+                    
                     variant = ProductVariant.objects.create(product=product, **cleaned_variant_data)
+                    print(f"Created variant {variant.id}")
                     
                     # Create dynamic options
                     if dynamic_options_data:
                         variant.set_dynamic_options(dynamic_options_data)
                 except Exception as e:
+                    print(f"Error creating variant {i}: {e}")
                     # Delete the product if variant creation fails
                     product.delete()
                     raise serializers.ValidationError(f"Error creating variant: {str(e)}")
@@ -423,7 +479,20 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
             instance.variants.all().delete()
             for variant_data in variants_data:
                 dynamic_options_data = variant_data.pop('dynamic_options', [])
-                variant = ProductVariant.objects.create(product=instance, **variant_data)
+                
+                # Remove read-only fields that shouldn't be set during creation
+                read_only_fields = ['is_in_stock', 'display_price', 'discount_percentage', 'option_values', 'option_names', 'all_options', 'dynamic_options']
+                cleaned_variant_data = {}
+                for key, value in variant_data.items():
+                    if key not in read_only_fields and value is not None and value != '':
+                        cleaned_variant_data[key] = value
+                
+                # Generate unique SKU before creating the variant
+                if 'sku' not in cleaned_variant_data or not cleaned_variant_data['sku']:
+                    cleaned_variant_data['sku'] = self._generate_unique_sku(instance, cleaned_variant_data)
+                    print(f"Generated SKU for update: {cleaned_variant_data['sku']}")
+                
+                variant = ProductVariant.objects.create(product=instance, **cleaned_variant_data)
                 
                 # Create dynamic options
                 if dynamic_options_data:

@@ -15,7 +15,6 @@ from django.conf import settings
 from django.utils import timezone
 from products.models import Product, ProductVariant
 
-
 class Wishlist(models.Model):
     """
     Wishlist Model
@@ -94,7 +93,6 @@ class Wishlist(models.Model):
             item.delete()
         
         return len(unavailable_items)
-
 
 class WishlistItem(models.Model):
     """

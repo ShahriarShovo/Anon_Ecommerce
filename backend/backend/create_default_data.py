@@ -113,7 +113,6 @@ def create_default_roles():
                 if created:
                     print(f"  - Assigned permission: {permission.name}")
             except Permission.DoesNotExist:
-                print(f"  - Permission not found: {perm_codename}")
 
     return created_roles
 

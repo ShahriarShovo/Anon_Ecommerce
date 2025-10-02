@@ -4,7 +4,6 @@ from orders.models.orders.order_item import OrderItem
 from orders.serializers.orders.address_serializer import AddressSerializer
 from orders.serializers.orders.order_item_serializer import OrderItemSerializer
 
-
 class OrderSerializer(serializers.ModelSerializer):
     """Serializer for Order model"""
     
@@ -53,7 +52,6 @@ class OrderSerializer(serializers.ModelSerializer):
             return payment.get_status_display()
         except:
             return 'Cash on Delivery'
-
 
 class OrderCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating orders"""

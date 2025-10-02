@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from orders.models.orders.address import Address
 
-
 class AddressSerializer(serializers.ModelSerializer):
     """Serializer for Address model"""
     
@@ -28,7 +27,6 @@ class AddressSerializer(serializers.ModelSerializer):
         # Set user from request context
         validated_data['user'] = self.context['request'].user
         return super().create(validated_data)
-
 
 class AddressCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating addresses from order form"""

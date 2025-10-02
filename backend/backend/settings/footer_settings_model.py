@@ -1,7 +1,6 @@
 from django.db import models
 from django.utils import timezone
 
-
 class FooterSettings(models.Model):
     """
     Main footer settings model
@@ -58,7 +57,6 @@ class FooterSettings(models.Model):
 
     def __str__(self):
         return f"Footer Settings - {self.email}"
-
 
 class SocialMediaLink(models.Model):
     """

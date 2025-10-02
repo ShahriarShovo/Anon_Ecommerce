@@ -7,7 +7,7 @@ import sqlite3
 import os
 
 def check_email_database():
-    print("🔍 Checking Email Settings Database")
+
     print("=" * 40)
     
     try:
@@ -52,7 +52,7 @@ def check_email_database():
                 print(f"\n✅ Database has {count} email settings")
                 print("   The email selection system should work!")
             else:
-                print("\n⚠️  No email settings found in database")
+
                 print("   This explains why you see 'No Email Settings Found'")
         else:
             print("❌ settings_emailsettings table does NOT exist")

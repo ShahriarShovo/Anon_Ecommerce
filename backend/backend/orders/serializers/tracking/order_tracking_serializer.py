@@ -4,7 +4,6 @@ from ...models.orders.order_item import OrderItem
 from ...models.orders.address import Address
 from ...models.payments.payment import Payment
 
-
 class OrderItemTrackingSerializer(serializers.ModelSerializer):
     """
     Serializer for order items in tracking response
@@ -43,8 +42,7 @@ class OrderItemTrackingSerializer(serializers.ModelSerializer):
                             image_url = f"http://localhost:8000{image_url}"
                         
                         return image_url
-                
-                
+
             else:
                 pass
             return None
@@ -57,7 +55,6 @@ class OrderItemTrackingSerializer(serializers.ModelSerializer):
             return obj.variant_title
         return None
 
-
 class AddressTrackingSerializer(serializers.ModelSerializer):
     """
     Serializer for delivery address in tracking response
@@ -68,7 +65,6 @@ class AddressTrackingSerializer(serializers.ModelSerializer):
             'full_name', 'address_line_1', 'address_line_2',
             'city', 'postal_code', 'country', 'phone_number'
         ]
-
 
 class PaymentTrackingSerializer(serializers.ModelSerializer):
     """
@@ -90,7 +86,6 @@ class PaymentTrackingSerializer(serializers.ModelSerializer):
             'transaction_id', 'cod_collected', 'cod_collected_at', 'cod_collected_by',
             'completed_at', 'created_at', 'updated_at', 'can_be_refunded'
         ]
-
 
 class OrderTrackingSerializer(serializers.ModelSerializer):
     """
@@ -130,7 +125,6 @@ class OrderTrackingSerializer(serializers.ModelSerializer):
         if obj.status in ['shipped', 'delivered']:
             return "GreatKart Logistics"
         return None
-
 
 class OrderTrackingRequestSerializer(serializers.Serializer):
     """

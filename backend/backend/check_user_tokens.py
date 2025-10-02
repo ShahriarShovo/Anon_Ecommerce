@@ -21,13 +21,13 @@ from accounts.models import User
 
 def check_user_tokens():
     """Check all users and their verification tokens"""
-    print("🔍 DEBUG: Checking all users and their verification tokens...")
+
     print("=" * 60)
     
     users = User.objects.all().order_by('-date_joined')
     
     if not users.exists():
-        print("❌ No users found in database")
+
         return
     
     print(f"📊 Total users: {users.count()}")
@@ -43,7 +43,6 @@ def check_user_tokens():
         print("-" * 40)
     
     print()
-    print("🔍 DEBUG: Database check completed!")
 
 if __name__ == "__main__":
     check_user_tokens()

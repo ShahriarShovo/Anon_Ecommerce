@@ -15,7 +15,6 @@ from rest_framework import serializers
 from cart.models import Cart, CartItem
 from products.serializers import ProductListSerializer, ProductVariantSerializer
 
-
 class CartItemSerializer(serializers.ModelSerializer):
     """
     Cart Item Serializer
@@ -72,7 +71,6 @@ class CartItemSerializer(serializers.ModelSerializer):
     def get_can_increase(self, obj):
         """Check if quantity can be increased"""
         return obj.can_increase_quantity()
-
 
 class AddToCartSerializer(serializers.Serializer):
     """
@@ -161,7 +159,6 @@ class AddToCartSerializer(serializers.Serializer):
         
         return attrs
 
-
 class CartSerializer(serializers.ModelSerializer):
     """
     Cart Serializer
@@ -219,7 +216,6 @@ class CartSerializer(serializers.ModelSerializer):
     def get_is_expired(self, obj):
         """Check if cart has expired"""
         return obj.is_expired()
-
 
 class UpdateCartItemSerializer(serializers.Serializer):
     """

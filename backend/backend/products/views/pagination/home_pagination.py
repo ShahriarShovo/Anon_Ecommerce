@@ -9,7 +9,6 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from products.models import Product
 from products.serializers import ProductListSerializer
 
-
 class HomePaginationViewSet(viewsets.ViewSet):
     """
     Pagination functionality for home page products
@@ -94,8 +93,7 @@ class HomePaginationViewSet(viewsets.ViewSet):
         """
         Get paginated products for home page with optional filters
         """
-        # print(f"🔍 PAGINATION_API: get_paginated_products called - User: {request.user}, Session: {request.session.session_key}")
-        
+
         # Base queryset - only active products
         queryset = Product.objects.filter(status='active').select_related('category', 'subcategory').prefetch_related('images')
         

@@ -11,7 +11,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
 class InvoiceGenerator:
     """
     Generator for invoice data and HTML

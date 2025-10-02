@@ -7,7 +7,6 @@ from django.db.models import Q
 from products.models import Product, ProductImage, ProductReview
 from products.serializers import ProductListSerializer
 
-
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def homepage_products(request):
@@ -16,14 +15,12 @@ def homepage_products(request):
     Returns: image, category name, product name, price
     """
     try:
-        
-        
+
         # Get active products with images, reviews, and variants
         products = Product.objects.filter(
             status='active'
         ).select_related('category').prefetch_related('images', 'reviews', 'variants').order_by('-created_at')[:12]
-        
-        
+
         # Prepare response data
         products_data = []
         for product in products:

@@ -4,7 +4,6 @@
 
 # User = get_user_model()
 
-
 # class NotificationSerializer(serializers.ModelSerializer):
 #     created_by_name = serializers.CharField(source='created_by.full_name', read_only=True)
 #     created_by_email = serializers.CharField(source='created_by.email', read_only=True)
@@ -27,7 +26,6 @@
 #     def get_is_visible(self, obj):
 #         return obj.is_visible()
 
-
 # class NotificationCreateSerializer(serializers.ModelSerializer):
 #     class Meta:
 #         model = Notification
@@ -45,7 +43,6 @@
         
 #         return data
 
-
 # class NotificationViewSerializer(serializers.ModelSerializer):
 #     notification_title = serializers.CharField(source='notification.title', read_only=True)
 #     user_email = serializers.CharField(source='user.email', read_only=True)
@@ -57,7 +54,6 @@
 #             'viewed_at', 'ip_address'
 #         ]
 #         read_only_fields = ['viewed_at']
-
 
 # class NotificationStatsSerializer(serializers.Serializer):
 #     total_notifications = serializers.IntegerField()

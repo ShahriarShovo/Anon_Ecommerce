@@ -5,7 +5,6 @@
 
 # User = get_user_model()
 
-
 # class DiscountSerializer(serializers.ModelSerializer):
 #     created_by_name = serializers.CharField(source='created_by.full_name', read_only=True)
 #     created_by_email = serializers.CharField(source='created_by.email', read_only=True)
@@ -42,7 +41,6 @@
 #         if obj.usage_limit:
 #             return max(0, obj.usage_limit - obj.usage_count)
 #         return None
-
 
 # class DiscountCreateSerializer(serializers.ModelSerializer):
 #     target_products = serializers.PrimaryKeyRelatedField(many=True, queryset=Product.objects.all(), required=False)
@@ -83,7 +81,6 @@
         
 #         return data
 
-
 # class DiscountUsageSerializer(serializers.ModelSerializer):
 #     discount_name = serializers.CharField(source='discount.name', read_only=True)
 #     user_email = serializers.CharField(source='user.email', read_only=True)
@@ -96,7 +93,6 @@
 #         ]
 #         read_only_fields = ['used_at']
 
-
 # class DiscountCalculationSerializer(serializers.Serializer):
 #     """Serializer for discount calculation requests"""
 #     cart_items = serializers.ListField(
@@ -105,7 +101,6 @@
 #     )
 #     user_id = serializers.IntegerField(required=False, allow_null=True)
 #     session_key = serializers.CharField(required=False)
-
 
 # class DiscountStatsSerializer(serializers.Serializer):
 #     total_discounts = serializers.IntegerField()

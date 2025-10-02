@@ -6,7 +6,6 @@ from django.contrib.auth.models import User
 from .permission_models import Permission, UserPermission, RolePermission, Role
 from .serializers import PermissionSerializer
 
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def check_dynamic_permission(request):
@@ -68,7 +67,6 @@ def check_dynamic_permission(request):
             'user_id': user.id
         })
 
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_dynamic_permission(request):
@@ -114,7 +112,6 @@ def create_dynamic_permission(request):
         return Response({
             'error': f'Failed to create permission: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -170,7 +167,6 @@ def assign_dynamic_permission(request):
             'error': f'Failed to assign permission: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_user_dynamic_permissions(request):
@@ -205,7 +201,6 @@ def get_user_dynamic_permissions(request):
         'permissions': list(all_permissions),
         'permission_count': len(all_permissions)
     })
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])

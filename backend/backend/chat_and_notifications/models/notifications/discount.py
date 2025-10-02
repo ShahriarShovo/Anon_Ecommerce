@@ -5,7 +5,6 @@
 
 # User = get_user_model()
 
-
 # class Discount(models.Model):
 #     DISCOUNT_TYPES = [
 #         ('general', 'General Discount (All Products)'),
@@ -220,7 +219,6 @@
 #         """Increment usage count"""
 #         self.usage_count += 1
 #         self.save(update_fields=['usage_count'])
-
 
 # class DiscountUsage(models.Model):
 #     """Track individual discount usage"""

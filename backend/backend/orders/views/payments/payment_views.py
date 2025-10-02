@@ -7,7 +7,6 @@ from orders.models.payments.payment import Payment
 from orders.models.payments.payment_method import PaymentMethod
 from orders.serializers.payments.payment_serializer import PaymentSerializer, PaymentMethodSerializer
 
-
 class PaymentMethodListView(generics.ListAPIView):
     """
     List all active payment methods
@@ -17,7 +16,6 @@ class PaymentMethodListView(generics.ListAPIView):
     
     def get_queryset(self):
         return PaymentMethod.objects.filter(is_active=True).order_by('display_order', 'name')
-
 
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
@@ -63,7 +61,6 @@ def mark_cod_collected(request, payment_id):
             'success': False,
             'message': f'Failed to mark payment as collected: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 class PaymentDetailView(generics.RetrieveAPIView):
     """

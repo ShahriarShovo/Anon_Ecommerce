@@ -1,6 +1,5 @@
 from django.db import models
 
-
 class PaymentMethod(models.Model):
     """
     Payment method model for storing available payment options

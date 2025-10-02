@@ -3,7 +3,6 @@
 from django.db import migrations
 from django.db.models import Count
 
-
 def clean_duplicate_carts(apps, schema_editor):
     """
     Clean up duplicate carts for each user, keeping only the most recent one
@@ -30,13 +29,11 @@ def clean_duplicate_carts(apps, schema_editor):
         # Delete duplicate carts
         duplicate_carts.delete()
 
-
 def reverse_clean_duplicate_carts(apps, schema_editor):
     """
     Reverse migration - nothing to do
     """
     pass
-
 
 class Migration(migrations.Migration):
 

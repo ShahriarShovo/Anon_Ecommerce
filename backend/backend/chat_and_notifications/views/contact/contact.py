@@ -6,7 +6,6 @@ from django.shortcuts import get_object_or_404
 from ...models.contact.contact import Contact
 from ...serializers.contact.contact import ContactSerializer, ContactCreateSerializer, ContactUpdateSerializer
 
-
 class ContactListCreateView(generics.ListCreateAPIView):
     """
     List and create contact messages
@@ -55,7 +54,6 @@ class ContactListCreateView(generics.ListCreateAPIView):
                 'errors': serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
 
-
 class ContactDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
     Retrieve, update and delete contact messages (admin only)
@@ -67,7 +65,6 @@ class ContactDetailView(generics.RetrieveUpdateDestroyAPIView):
         if self.request.method in ['PUT', 'PATCH']:
             return ContactUpdateSerializer
         return ContactSerializer
-
 
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
@@ -96,7 +93,6 @@ def contact_stats(request):
             'message': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
 def mark_as_read(request, contact_id):
@@ -117,7 +113,6 @@ def mark_as_read(request, contact_id):
             'success': False,
             'message': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser])

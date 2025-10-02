@@ -13,7 +13,6 @@ from .permission_serializers import (
 
 User = get_user_model()
 
-
 class PermissionListView(generics.ListAPIView):
     """List all permissions"""
     queryset = Permission.objects.filter(is_active=True)
@@ -28,7 +27,6 @@ class PermissionListView(generics.ListAPIView):
             'data': serializer.data,
             'count': len(serializer.data)
         })
-
 
 class RoleListView(generics.ListCreateAPIView):
     """List and create roles"""
@@ -48,7 +46,6 @@ class RoleListView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save()
 
-
 class RoleDetailView(generics.RetrieveUpdateDestroyAPIView):
     """Retrieve, update, or delete a role"""
     queryset = Role.objects.filter(is_active=True)
@@ -60,7 +57,6 @@ class RoleDetailView(generics.RetrieveUpdateDestroyAPIView):
             raise serializers.ValidationError("Cannot delete system roles")
         instance.is_active = False
         instance.save()
-
 
 class RolePermissionView(generics.ListCreateAPIView):
     """Manage permissions for a specific role"""
@@ -97,7 +93,6 @@ class RolePermissionView(generics.ListCreateAPIView):
 
         return Response({'message': 'Role permissions updated successfully'})
 
-
 class UserPermissionListView(generics.ListAPIView):
     """List all users with their permissions"""
     queryset = User.objects.filter(is_staff=True).prefetch_related(
@@ -105,7 +100,6 @@ class UserPermissionListView(generics.ListAPIView):
     )
     serializer_class = UserPermissionListSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
-
 
 class UserPermissionAssignmentView(generics.CreateAPIView):
     """Assign permissions and roles to a user"""
@@ -148,7 +142,6 @@ class UserPermissionAssignmentView(generics.CreateAPIView):
 
         return Response({'message': 'User permissions updated successfully'}, status=status.HTTP_201_CREATED)
 
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_user_permissions(request):
@@ -172,7 +165,6 @@ def get_user_permissions(request):
         'is_superuser': user.is_superuser,
         'is_staff': user.is_staff
     })
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -213,14 +205,12 @@ def check_permission(request):
 
     return Response({'has_permission': has_permission})
 
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def get_permission_categories(request):
     """Get all permission categories"""
     categories = Permission.objects.filter(is_active=True).values_list('category', flat=True).distinct()
     return Response({'categories': list(categories)})
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])

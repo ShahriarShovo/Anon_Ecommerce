@@ -4,7 +4,6 @@ from ...models import Participant
 
 User = get_user_model()
 
-
 class ParticipantSerializer(serializers.ModelSerializer):
     """Serializer for conversation participants"""
     user_name = serializers.CharField(source='user.full_name', read_only=True)
@@ -23,7 +22,6 @@ class ParticipantSerializer(serializers.ModelSerializer):
         """Check if user is staff/admin"""
         return obj.user.is_staff or obj.user.is_superuser
 
-
 class ParticipantCreateSerializer(serializers.ModelSerializer):
     """Serializer for adding participants to conversations"""
     
@@ -39,7 +37,6 @@ class ParticipantCreateSerializer(serializers.ModelSerializer):
             defaults={'is_active': True}
         )
         return participant
-
 
 class ParticipantUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating participant status"""
@@ -57,7 +54,6 @@ class ParticipantUpdateSerializer(serializers.ModelSerializer):
             instance.deactivate()
         
         return instance
-
 
 class OnlineStatusSerializer(serializers.Serializer):
     """Serializer for updating online status"""

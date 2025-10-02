@@ -17,8 +17,7 @@ from settings.email_model import EmailSettings
 
 def fix_primary_emails():
     """Fix multiple primary email settings by keeping only one primary"""
-    print("🔍 Checking current primary email settings...")
-    
+
     # Get all primary email settings
     primary_emails = EmailSettings.objects.filter(is_primary=True)
     print(f"Found {primary_emails.count()} primary email settings:")
@@ -27,8 +26,7 @@ def fix_primary_emails():
         print(f"  - ID: {email.id}, Name: {email.name}, Email: {email.email_address}, Created by: {email.created_by.username}")
     
     if primary_emails.count() > 1:
-        print("\n⚠️  Multiple primary emails found! Fixing...")
-        
+
         # Keep the first one as primary, unset others
         first_primary = primary_emails.first()
         others = primary_emails.exclude(id=first_primary.id)
@@ -46,11 +44,9 @@ def fix_primary_emails():
         print(f"✅ Verification: {remaining_primary.count()} primary email(s) remaining")
         
     elif primary_emails.count() == 1:
-        print("✅ Only one primary email found - no fix needed!")
-        
+
     else:
-        print("⚠️  No primary emails found!")
-        
+
         # Make the first active email as primary
         first_active = EmailSettings.objects.filter(is_active=True).first()
         if first_active:
@@ -58,7 +54,6 @@ def fix_primary_emails():
             first_active.save()
             print(f"✅ Set ID {first_active.id} as primary")
         else:
-            print("❌ No active emails found to set as primary")
 
 if __name__ == "__main__":
     fix_primary_emails()

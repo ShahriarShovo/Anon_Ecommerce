@@ -11,7 +11,6 @@ from drf_yasg import openapi
 
 User = get_user_model()
 
-
 def _format_last_login(last_login):
     """Format last login in Bangladesh timezone with 12-hour format"""
     if not last_login:
@@ -33,7 +32,6 @@ def _format_last_login(last_login):
     
     # Format in 12-hour format with AM/PM
     return bd_dt.strftime('%Y-%m-%d %I:%M:%S %p')
-
 
 class AdminUserProfileUpdateView(generics.UpdateAPIView):
     """
@@ -61,7 +59,6 @@ class AdminUserProfileUpdateView(generics.UpdateAPIView):
             profile_serializer = ProfileSerializer(profile, data=profile_data, partial=True)
             if profile_serializer.is_valid():
                 profile_serializer.save()
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
@@ -133,7 +130,6 @@ def admin_change_user_password(request):
             'success': False,
             'message': f'Error updating password: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])

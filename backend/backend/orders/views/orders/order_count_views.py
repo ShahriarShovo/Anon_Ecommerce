@@ -5,7 +5,6 @@ from rest_framework import status
 from django.db.models import Q
 from ...models.orders.order import Order
 
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_pending_orders_count(request):
@@ -32,7 +31,6 @@ def get_pending_orders_count(request):
             'error': f'Failed to get pending orders count: {str(e)}',
             'success': False
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

@@ -150,9 +150,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                 
                 # Store mutable data for serializer to use
                 request._mutable_data = mutable_data
-                
-        
-        
+
         # Check for Product Options
         options_keys = [key for key in request.data.keys() if key.startswith('options[')]
         
@@ -207,8 +205,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             
             # Add the parsed variants data
             serializer_data['variants'] = request._variants_data
-            
-            # 🔍 DEBUG: Add options data if available
+
             if hasattr(request, '_options_data'):
                 serializer_data['options'] = request._options_data
             
@@ -225,20 +222,218 @@ class ProductViewSet(viewsets.ModelViewSet):
             
             serializer = self.get_serializer(data=serializer_data)
             if not serializer.is_valid():
-                # Return only the first few errors to avoid huge response
-                error_summary = {}
-                for field, errors in serializer.errors.items():
-                    if len(errors) > 5:
-                        error_summary[field] = errors[:5] + [f"... and {len(errors) - 5} more errors"]
-                    else:
-                        error_summary[field] = errors
-                return Response(error_summary, status=status.HTTP_400_BAD_REQUEST)
+                # Return detailed errors for debugging
+                print("Serializer validation errors:", serializer.errors)
+                return Response({
+                    'message': 'Validation failed',
+                    'errors': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
             self.perform_create(serializer)
             headers = self.get_success_headers(serializer.data)
             return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
         
         try:
             return super().create(request, *args, **kwargs)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self, request, *args, **kwargs):
+        """Custom update method to handle FormData with variants"""
+        # Check if we have variant data in FormData
+        has_variants = any(key.startswith('variants[') for key in request.data.keys())
+        
+        # Parse FormData manually for variants (same logic as create)
+        if request.content_type and 'multipart/form-data' in request.content_type and has_variants:
+            # Extract variants data from FormData
+            variants_data = []
+            variant_index = 0
+            
+            while True:
+                variant_key = f'variants[{variant_index}][title]'
+                if variant_key not in request.data:
+                    break
+                
+                variant_data = {}
+                # Extract basic variant fields with proper data handling
+                for key, value in request.data.items():
+                    if key.startswith(f'variants[{variant_index}]') and not key.startswith(f'variants[{variant_index}][dynamic_options]'):
+                        field_name = key.split(']')[1][1:]  # Remove 'variants[index][' and ']'
+                        
+                        # Skip problematic fields
+                        if field_name not in ['options']:
+                            # Get the actual value (handle both single values and lists)
+                            actual_value = value[0] if isinstance(value, list) and value else value
+                            
+                            # Skip empty values for optional fields
+                            if not actual_value and field_name not in ['title', 'price']:
+                                continue
+                            
+                            # Convert string values to appropriate types
+                            if field_name in ['price', 'old_price', 'weight']:
+                                try:
+                                    if actual_value:
+                                        variant_data[field_name] = float(actual_value)
+                                    elif field_name == 'price':
+                                        # Price is required, set to 0 if empty
+                                        variant_data[field_name] = 0.0
+                                except (ValueError, TypeError):
+                                    if field_name == 'price':
+                                        variant_data[field_name] = 0.0
+                            elif field_name in ['quantity', 'position']:
+                                try:
+                                    if actual_value:
+                                        variant_data[field_name] = int(actual_value)
+                                    else:
+                                        variant_data[field_name] = 0 if field_name == 'quantity' else 1
+                                except (ValueError, TypeError):
+                                    variant_data[field_name] = 0 if field_name == 'quantity' else 1
+                            elif field_name in ['track_quantity', 'allow_backorder', 'is_active']:
+                                variant_data[field_name] = str(actual_value).lower() == 'true' if actual_value else False
+                            else:
+                                variant_data[field_name] = str(actual_value) if actual_value else ''
+                
+                # Extract dynamic options
+                dynamic_options = []
+                option_index = 0
+                while True:
+                    option_name_key = f'variants[{variant_index}][dynamic_options][{option_index}][name]'
+                    if option_name_key not in request.data:
+                        break
+                    
+                    # Get actual values properly
+                    name_data = request.data.get(option_name_key, [''])
+                    if isinstance(name_data, list):
+                        name_value = name_data[0] if name_data and len(name_data) > 0 else ''
+                    else:
+                        name_value = str(name_data) if name_data else ''
+                    
+                    value_key = f'variants[{variant_index}][dynamic_options][{option_index}][value]'
+                    value_data = request.data.get(value_key, [''])
+                    if isinstance(value_data, list):
+                        value_value = value_data[0] if value_data and len(value_data) > 0 else ''
+                    else:
+                        value_value = str(value_data) if value_data else ''
+                    
+                    position_key = f'variants[{variant_index}][dynamic_options][{option_index}][position]'
+                    position_data = request.data.get(position_key, [option_index + 1])
+                    if isinstance(position_data, list):
+                        position_value = position_data[0] if position_data and len(position_data) > 0 else option_index + 1
+                    else:
+                        position_value = int(position_data) if position_data else option_index + 1
+                    
+                    option_data = {
+                        'name': str(name_value),
+                        'value': str(value_value),
+                        'position': int(position_value) if position_value else option_index + 1
+                    }
+                    dynamic_options.append(option_data)
+                    option_index += 1
+                
+                if dynamic_options:
+                    variant_data['dynamic_options'] = dynamic_options
+                
+                variants_data.append(variant_data)
+                variant_index += 1
+            
+            # Add variants to request data
+            if variants_data:
+                # Create a mutable copy of request.data
+                from django.http import QueryDict
+                mutable_data = QueryDict('', mutable=True)
+                
+                # Copy all existing data
+                for key, value in request.data.items():
+                    if isinstance(value, list):
+                        for v in value:
+                            mutable_data.appendlist(key, v)
+                    else:
+                        mutable_data[key] = value
+                
+                # Store variants data separately for serializer to use
+                request._variants_data = variants_data
+                
+                # Store mutable data for serializer to use
+                request._mutable_data = mutable_data
+
+        # Check for Product Options
+        options_keys = [key for key in request.data.keys() if key.startswith('options[')]
+        
+        # Check if we have options data
+        has_options = any(key.startswith('options[') for key in request.data.keys())
+        
+        if has_options:
+            options_data = []
+            option_index = 0
+            
+            while True:
+                option_name_key = f'options[{option_index}][name]'
+                option_position_key = f'options[{option_index}][position]'
+                
+                if option_name_key not in request.data:
+                    break
+                
+                name_data = request.data.get(option_name_key, [''])
+                if isinstance(name_data, list):
+                    name_value = name_data[0] if name_data and len(name_data) > 0 else ''
+                else:
+                    name_value = str(name_data) if name_data else ''
+                
+                position_data = request.data.get(option_position_key, [option_index + 1])
+                if isinstance(position_data, list):
+                    position_value = position_data[0] if position_data and len(position_data) > 0 else option_index + 1
+                else:
+                    position_value = int(position_data) if position_data else option_index + 1
+                
+                option_data = {
+                    'name': str(name_value),
+                    'position': int(position_value) if position_value else option_index + 1
+                }
+                options_data.append(option_data)
+                option_index += 1
+            
+            # Store options data for serializer
+            if options_data:
+                request._options_data = options_data
+        
+        # Use custom data if available
+        if hasattr(request, '_mutable_data') and hasattr(request, '_variants_data'):
+            # Convert QueryDict to regular dict and add variants
+            serializer_data = {}
+            for key, value in request._mutable_data.items():
+                if key.startswith('variants['):
+                    continue  # Skip FormData variant keys
+                serializer_data[key] = value
+            
+            # Add the parsed variants data
+            serializer_data['variants'] = request._variants_data
+
+            if hasattr(request, '_options_data'):
+                serializer_data['options'] = request._options_data
+            
+            # Handle uploaded_images properly - only include actual files
+            uploaded_images = []
+            
+            # Use request.FILES directly to avoid duplicates
+            if 'uploaded_images' in request.FILES:
+                files = request.FILES.getlist('uploaded_images')
+                for i, file in enumerate(files):
+                    uploaded_images.append(file)
+            
+            serializer_data['uploaded_images'] = uploaded_images
+            
+            serializer = self.get_serializer(self.get_object(), data=serializer_data, partial=True)
+            if not serializer.is_valid():
+                # Return detailed errors for debugging
+                print("Update serializer validation errors:", serializer.errors)
+                return Response({
+                    'message': 'Validation failed',
+                    'errors': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        try:
+            return super().update(request, *args, **kwargs)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -567,7 +762,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                 return Response({
                     'message': 'Product deleted successfully.',
                     'deleted': True
-                }, status=status.HTTP_204_NO_CONTENT)
+                }, status=status.HTTP_200_OK)
                 
         except Exception as e:
             return Response({

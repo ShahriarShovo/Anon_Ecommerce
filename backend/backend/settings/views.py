@@ -9,7 +9,6 @@ from .serializers import (
     BannerSerializer, BannerCreateSerializer, ActiveBannerSerializer
 )
 
-
 class LogoViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing logos
@@ -74,7 +73,6 @@ class LogoViewSet(viewsets.ModelViewSet):
             'inactive_logos': total_logos - active_logos
         })
 
-
 class BannerViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing banners
@@ -97,15 +95,13 @@ class BannerViewSet(viewsets.ModelViewSet):
     def get_active_banners(self, request):
         """Get all active banners for public display"""
         try:
-            print(f"Banner API: Getting active banners...")
+
             active_banners = Banner.get_active_banners()
-            print(f"Banner API: Found {active_banners.count()} active banners")
-            
+
             serializer = ActiveBannerSerializer(active_banners, many=True)
-            print(f"Banner API: Serialized {len(serializer.data)} banners")
+
             return Response(serializer.data)
         except Exception as e:
-            print(f"Banner API: Error: {str(e)}")
             return Response({
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

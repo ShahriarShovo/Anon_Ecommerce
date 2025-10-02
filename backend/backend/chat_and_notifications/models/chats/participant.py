@@ -4,7 +4,6 @@ from django.utils import timezone
 
 User = get_user_model()
 
-
 class Participant(models.Model):
     """Track participant information for conversations"""
     

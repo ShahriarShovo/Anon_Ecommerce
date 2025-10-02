@@ -14,7 +14,6 @@ from ...serializers import (
 
 User = get_user_model()
 
-
 class ParticipantViewSet(viewsets.ModelViewSet):
     """ViewSet for managing conversation participants"""
     permission_classes = [IsAuthenticated]
@@ -102,7 +101,6 @@ class ParticipantViewSet(viewsets.ModelViewSet):
             'message': f'Online status set to {is_online}',
             'is_online': is_online
         })
-
 
 class OnlineStatusView(viewsets.GenericViewSet):
     """View for managing online status"""

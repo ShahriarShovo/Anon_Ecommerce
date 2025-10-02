@@ -5,7 +5,6 @@ from django.http import JsonResponse
 from accounts.send_reset_password_link import send_password_reset_email, verify_reset_token, clear_reset_token
 from accounts.models import User
 
-
 class ForgotPasswordView(APIView):
     """
     Handle forgot password requests
@@ -34,7 +33,6 @@ class ForgotPasswordView(APIView):
                 'success': False,
                 'message': message
             }, status=status.HTTP_400_BAD_REQUEST)
-
 
 class ResetPasswordView(APIView):
     """

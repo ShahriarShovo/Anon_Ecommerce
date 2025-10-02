@@ -9,7 +9,6 @@ from drf_yasg import openapi
 from products.models import Product
 from products.serializers import ProductListSerializer
 
-
 class PriceFilterViewSet(viewsets.ViewSet):
     """
     Price filtering functionality for products

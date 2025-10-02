@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from .footer_settings_model import FooterSettings, SocialMediaLink
 
-
 class SocialMediaLinkSerializer(serializers.ModelSerializer):
     """
     Serializer for social media links
@@ -14,7 +13,6 @@ class SocialMediaLinkSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
-
 class SocialMediaLinkCreateSerializer(serializers.ModelSerializer):
     """
     Serializer for creating social media links
@@ -22,7 +20,6 @@ class SocialMediaLinkCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = SocialMediaLink
         fields = ['platform', 'url', 'icon', 'is_active', 'order']
-
 
 class FooterSettingsSerializer(serializers.ModelSerializer):
     """
@@ -37,7 +34,6 @@ class FooterSettingsSerializer(serializers.ModelSerializer):
             'mission', 'vision', 'business_hours', 'quick_response', 'is_active', 'social_links', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
-
 
 class FooterSettingsCreateSerializer(serializers.ModelSerializer):
     """
@@ -86,7 +82,6 @@ class FooterSettingsCreateSerializer(serializers.ModelSerializer):
                 )
         
         return instance
-
 
 class FooterSettingsListSerializer(serializers.ModelSerializer):
     """

@@ -8,7 +8,6 @@ from django.db.models import Q
 from products.models import Product
 from orders.models import Order, OrderItem
 
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def check_purchase_eligibility(request, slug):
@@ -84,7 +83,6 @@ def check_purchase_eligibility(request, slug):
             'success': False,
             'error': f'Error checking purchase eligibility: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

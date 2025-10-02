@@ -20,7 +20,6 @@ from invoice.models import Invoice
 from invoice.serializers import InvoiceSerializer
 from orders.models.orders.order import Order
 
-
 class InvoiceListView(generics.ListAPIView):
     """
     List all invoices for the authenticated user
@@ -30,7 +29,6 @@ class InvoiceListView(generics.ListAPIView):
     
     def get_queryset(self):
         return Invoice.objects.filter(order__user=self.request.user).order_by('-created_at')
-
 
 class InvoiceDetailView(generics.RetrieveAPIView):
     """
@@ -42,20 +40,17 @@ class InvoiceDetailView(generics.RetrieveAPIView):
     def get_queryset(self):
         return Invoice.objects.filter(order__user=self.request.user)
 
-
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def generate_invoice(request, order_id):
     """
     Generate invoice for an order
     """
-    print(f"🧾 Invoice generation: User: {request.user.email}, Order ID: {order_id}")
-    
+
     try:
         # Get order
         order = get_object_or_404(Order, id=order_id, user=request.user)
-        print(f"🧾 Order found: {order.order_number}")
-        
+
         # Create or get invoice
         invoice, created = Invoice.objects.get_or_create(
             order=order,
@@ -65,10 +60,10 @@ def generate_invoice(request, order_id):
         )
         
         if created:
-            print(f"🧾 Invoice created: {invoice.invoice_number}")
+            pass
         else:
-            print(f"🧾 Invoice found: {invoice.invoice_number}")
-        
+            pass
+
         # Return invoice data
         serializer = InvoiceSerializer(invoice, context={'request': request})
         
@@ -79,14 +74,12 @@ def generate_invoice(request, order_id):
         }, status=status.HTTP_200_OK)
         
     except Exception as e:
-        print(f"🧾 Invoice generation error: {str(e)}")
         import traceback
         traceback.print_exc()
         return Response({
             'success': False,
             'message': f'Failed to generate invoice: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
@@ -111,12 +104,10 @@ def invoice_pdf_view(request, invoice_id):
         return HttpResponse(html_content, content_type='text/html')
         
     except Exception as e:
-        print(f"🧾 Invoice PDF error: {str(e)}")
         return Response({
             'success': False,
             'message': f'Failed to generate invoice PDF: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
@@ -126,8 +117,7 @@ def download_invoice_pdf(request, invoice_id):
     """
     try:
         invoice = get_object_or_404(Invoice, id=invoice_id, order__user=request.user)
-        print(f"🧾 PDF Download: Invoice {invoice.invoice_number}")
-        
+
         # Create BytesIO buffer for PDF
         buffer = BytesIO()
         
@@ -258,12 +248,10 @@ def download_invoice_pdf(request, invoice_id):
         response = HttpResponse(pdf_content, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="invoice_{invoice.invoice_number}.pdf"'
         response['Content-Length'] = len(pdf_content)
-        
-        print(f"🧾 PDF generated successfully: {len(pdf_content)} bytes")
+
         return response
         
     except Exception as e:
-        print(f"🧾 PDF download error: {str(e)}")
         import traceback
         traceback.print_exc()
         return Response({

@@ -14,7 +14,6 @@ from rest_framework import serializers
 from cart.models import Wishlist, WishlistItem
 from products.serializers import ProductListSerializer, ProductVariantSerializer
 
-
 class WishlistItemSerializer(serializers.ModelSerializer):
     """
     Wishlist Item Serializer
@@ -55,7 +54,6 @@ class WishlistItemSerializer(serializers.ModelSerializer):
         """Check if item is still available"""
         return obj.is_available()
 
-
 class WishlistSerializer(serializers.ModelSerializer):
     """
     Wishlist Serializer
@@ -93,7 +91,6 @@ class WishlistSerializer(serializers.ModelSerializer):
     def get_total_items(self, obj):
         """Get total number of items in wishlist"""
         return obj.get_total_items()
-
 
 class AddToWishlistSerializer(serializers.Serializer):
     """

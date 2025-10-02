@@ -3,7 +3,6 @@ from products.models.products.product import Product
 from products.models.products.variant import ProductVariant
 from .order import Order
 
-
 class OrderItem(models.Model):
     """
     Individual items within an order

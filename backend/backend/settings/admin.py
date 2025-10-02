@@ -49,12 +49,10 @@ class EmailLogAdmin(admin.ModelAdmin):
     search_fields = ['to_email', 'from_email', 'subject']
     readonly_fields = ['created_at', 'sent_at', 'delivered_at']
 
-
 class SocialMediaLinkInline(admin.TabularInline):
     model = SocialMediaLink
     extra = 1
     fields = ['platform', 'url', 'icon', 'is_active', 'order']
-
 
 @admin.register(FooterSettings)
 class FooterSettingsAdmin(admin.ModelAdmin):
@@ -81,7 +79,6 @@ class FooterSettingsAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         })
     )
-
 
 @admin.register(SocialMediaLink)
 class SocialMediaLinkAdmin(admin.ModelAdmin):

@@ -4,7 +4,6 @@ from django.utils import timezone
 
 User = get_user_model()
 
-
 class Message(models.Model):
     MESSAGE_TYPES = [
         ('text', 'Text'),

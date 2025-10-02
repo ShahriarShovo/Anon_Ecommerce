@@ -10,24 +10,20 @@ from ...models import Conversation, Message, Participant
 
 User = get_user_model()
 
-
 class ChatConsumer(AsyncJsonWebsocketConsumer):
     """WebSocket consumer for individual conversation chat"""
     
     async def connect(self):
         """Handle WebSocket connection"""
-        print(f"WebSocket connection attempt - User: {self.scope.get('user')}")
-        
+
         self.conversation_id = self.scope['url_route']['kwargs']['conversation_id']
         self.conversation_group_name = f'chat_{self.conversation_id}'
         
         # Get user from scope
         self.user = self.scope.get('user')
-        
-        print(f"WebSocket user authentication check - User: {self.user}, Is Anonymous: {isinstance(self.user, AnonymousUser)}")
-        
+
         if isinstance(self.user, AnonymousUser) or not self.user:
-            print("WebSocket connection rejected - User not authenticated")
+
             await self.close()
             return
         
@@ -53,9 +49,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             'conversation_id': self.conversation_id,
             'user': self.user.email
         })
-        
-        print(f"WebSocket connection established for user: {self.user.email}")
-    
+
     async def disconnect(self, close_code):
         """Handle WebSocket disconnection"""
         # Update user's online status
@@ -83,8 +77,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
     async def handle_chat_message(self, content):
         """Handle chat message"""
         message_content = content.get('message', '').strip()
-        print(f"WebSocket received message: {message_content}")
-        
+
         if not message_content:
             await self.send_json({
                 'type': 'error',
@@ -94,8 +87,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         
         # Save message to database
         message = await self.save_message(message_content)
-        print(f"Message saved to database: {message}")
-        
+
         if message:
             # Send message to conversation group (including sender)
             message_data = {
@@ -108,8 +100,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 'is_sender_staff': message.sender.is_staff or message.sender.is_superuser,
                 'conversation_id': str(message.conversation_id),
             }
-            
-            print(f"Sending message to group: {message_data}")
+
             await self.channel_layer.group_send(
                 self.conversation_group_name,
                 {
@@ -129,8 +120,8 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 )
             except Exception as e:
                 # Avoid crashing the consumer if admin group not present
-                print(f"Warning: failed to notify admin_inbox group: {e}")
-    
+                pass
+
     async def handle_typing_start(self, content):
         """Handle typing start indicator"""
         await self.channel_layer.group_send(
@@ -188,8 +179,8 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                     }
                 )
             except Exception as e:
-                print(f"Warning: failed to notify admin_inbox on messages_read: {e}")
-    
+                pass
+
     async def chat_message(self, event):
         """Send chat message to WebSocket"""
         await self.send_json({
@@ -288,7 +279,6 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         
         for participant in participants:
             participant.set_online_status(is_online)
-
 
 class AdminConsumer(AsyncJsonWebsocketConsumer):
     """WebSocket consumer for admin/staff inbox"""

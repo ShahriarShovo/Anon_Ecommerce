@@ -14,7 +14,6 @@ from drf_yasg import openapi
 
 User = get_user_model()
 
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 @swagger_auto_schema(
@@ -87,7 +86,6 @@ def get_user_permission_details(request, user_id):
             'message': 'User not found'
         }, status=status.HTTP_404_NOT_FOUND)
 
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 @swagger_auto_schema(
@@ -152,7 +150,6 @@ def assign_user_roles(request, user_id):
             'success': False,
             'message': 'User not found'
         }, status=status.HTTP_404_NOT_FOUND)
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
@@ -219,7 +216,6 @@ def assign_user_direct_permissions(request, user_id):
             'message': 'User not found'
         }, status=status.HTTP_404_NOT_FOUND)
 
-
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 @swagger_auto_schema(
@@ -252,7 +248,6 @@ def remove_user_permissions(request, user_id):
             'success': False,
             'message': 'User not found'
         }, status=status.HTTP_404_NOT_FOUND)
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
@@ -303,7 +298,6 @@ def get_users_by_role(request, role_id):
             'success': False,
             'message': 'Role not found'
         }, status=status.HTTP_404_NOT_FOUND)
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
@@ -405,7 +399,6 @@ def bulk_assign_permissions(request):
         'success_count': success_count,
         'errors': errors if errors else None
     }, status=status.HTTP_200_OK)
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])

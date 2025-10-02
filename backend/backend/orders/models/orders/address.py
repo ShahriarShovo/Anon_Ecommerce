@@ -1,7 +1,6 @@
 from django.db import models
 from accounts.models import User
 
-
 class Address(models.Model):
     """
     User address model for storing delivery addresses

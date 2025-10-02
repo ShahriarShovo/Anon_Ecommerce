@@ -3,7 +3,6 @@ from django.utils import timezone
 from accounts.models import User
 from .address import Address
 
-
 class Order(models.Model):
     """
     Main order model for storing customer orders

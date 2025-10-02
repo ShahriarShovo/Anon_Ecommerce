@@ -7,12 +7,10 @@ from accounts.permission_models import Permission
 from rest_framework import status
 from rest_framework.response import Response
 
-
 class PermissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Permission
         fields = ['id', 'name', 'codename', 'description', 'category', 'is_active', 'created_at', 'updated_at']
-
 
 class UserRegistrationSerializers(serializers.ModelSerializer):
     confirm_password = serializers.CharField(style={'input_type':'password'}, write_only=True)
@@ -57,15 +55,11 @@ class UserRegistrationSerializers(serializers.ModelSerializer):
         
         return user
 
-
-
 class LoginSerializer(serializers.ModelSerializer):
     email = serializers.EmailField()
     class Meta:
         model=User
         fields=['email','password']
-
-
 
 class ProfileSerializer(serializers.ModelSerializer):
     is_staff = serializers.BooleanField(source='user.is_staff', read_only=True)
@@ -77,7 +71,6 @@ class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
         fields=['id', 'email', 'username', 'full_name', 'address', 'city', 'zipcode', 'country', 'phone', 'is_staff', 'is_superuser', 'email_verified']
-
 
 class UserListSerializer(serializers.ModelSerializer):
     """
@@ -128,7 +121,6 @@ class UserListSerializer(serializers.ModelSerializer):
         )['total']
         return float(total) if total else 0.0
 
-
 class User_Password_Change_Serializer(serializers.Serializer):
     password = serializers.CharField(style={'input_type':'password'}, write_only=True)
     confirm_password = serializers.CharField(style={'input_type':'password'}, write_only=True)
@@ -148,8 +140,6 @@ class User_Password_Change_Serializer(serializers.Serializer):
             user.save()
             return attrs      
 
-
-
 # class UserPasswordChangedSerializer(serializers.Serializer):
 #     password = serializers.CharField(style={'input_type':'password'}, write_only=True)
 #     confirm_password = serializers.CharField(style={'input_type':'password'}, write_only=True)
@@ -166,6 +156,5 @@ class User_Password_Change_Serializer(serializers.Serializer):
 #         user.set_password(password)
 #         user.save()
 #         return attrs
-
 
         

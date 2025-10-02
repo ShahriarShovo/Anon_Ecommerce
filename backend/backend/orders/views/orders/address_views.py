@@ -6,7 +6,6 @@ from django.db.models.deletion import ProtectedError
 from orders.models.orders.address import Address
 from orders.serializers.orders.address_serializer import AddressSerializer
 
-
 class AddressListView(generics.ListCreateAPIView):
     """
     List all addresses for the authenticated user or create a new address
@@ -16,14 +15,12 @@ class AddressListView(generics.ListCreateAPIView):
     
     def get_queryset(self):
         user = self.request.user
-        print(f"🔍 AddressListView - User: {user} (ID: {user.id if user else 'None'})")
+
         queryset = Address.objects.filter(user=user)
-        print(f"🔍 AddressListView - Found {queryset.count()} addresses for user {user.id}")
-        
+
         # Check address isolation
         all_addresses = Address.objects.all()
-        print(f"🔍 AddressListView - Total addresses in database: {all_addresses.count()}")
-        print(f"🔍 AddressListView - Addresses by user:")
+
         for addr in all_addresses:
             print(f"    Address ID {addr.id}: User {addr.user.id} ({addr.user.email})")
         
@@ -31,9 +28,8 @@ class AddressListView(generics.ListCreateAPIView):
     
     def perform_create(self, serializer):
         user = self.request.user
-        print(f"🔍 AddressListView - Creating address for user: {user} (ID: {user.id})")
-        serializer.save(user=user)
 
+        serializer.save(user=user)
 
 class AddressDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
@@ -44,23 +40,20 @@ class AddressDetailView(generics.RetrieveUpdateDestroyAPIView):
     
     def get_queryset(self):
         user = self.request.user
-        print(f"🔍 AddressDetailView - User: {user} (ID: {user.id if user else 'None'})")
+
         queryset = Address.objects.filter(user=user)
-        print(f"🔍 AddressDetailView - Found {queryset.count()} addresses for user {user.id}")
+
         return queryset
     
     def update(self, request, *args, **kwargs):
         user = request.user
         address_id = kwargs.get('pk')
-        print(f"✏️ AddressDetailView - User: {user} (ID: {user.id}) trying to update address ID: {address_id}")
-        print(f"✏️ AddressDetailView - Update data: {request.data}")
-        
+
         # Check if address exists and belongs to user
         try:
             address = Address.objects.get(id=address_id, user=user)
-            print(f"✏️ Address found: {address.full_name} (ID: {address.id}, User: {address.user.id})")
+
         except Address.DoesNotExist:
-            print(f"✏️ Address ID {address_id} not found for user {user.id}")
             return Response({
                 'success': False,
                 'message': 'Address not found or you do not have permission to update it.',
@@ -69,10 +62,9 @@ class AddressDetailView(generics.RetrieveUpdateDestroyAPIView):
         
         try:
             result = super().update(request, *args, **kwargs)
-            print(f"✏️ Address {address_id} updated successfully for user {user.id}")
+
             return result
         except Exception as e:
-            print(f"✏️ Error updating address {address_id}: {e}")
             return Response({
                 'success': False,
                 'message': f'Failed to update address: {str(e)}',
@@ -82,14 +74,13 @@ class AddressDetailView(generics.RetrieveUpdateDestroyAPIView):
     def destroy(self, request, *args, **kwargs):
         user = request.user
         address_id = kwargs.get('pk')
-        print(f"🗑️ AddressDetailView - User: {user} (ID: {user.id}) trying to delete address ID: {address_id}")
-        
+
         # Check if address exists and belongs to user
         try:
             address = Address.objects.get(id=address_id, user=user)
-            print(f"🗑️ Address found: {address.full_name} (ID: {address.id}, User: {address.user.id})")
+
         except Address.DoesNotExist:
-            print(f"🗑️ Address ID {address_id} not found for user {user.id}")
+
             return Response({
                 'success': False,
                 'message': 'Address not found or you do not have permission to delete it.',
@@ -98,16 +89,15 @@ class AddressDetailView(generics.RetrieveUpdateDestroyAPIView):
         
         try:
             result = super().destroy(request, *args, **kwargs)
-            print(f"🗑️ Address {address_id} deleted successfully for user {user.id}")
+
             return result
         except ProtectedError as e:
-            print(f"🗑️ ProtectedError when deleting address {address_id}: {e}")
+
             return Response({
                 'success': False,
                 'message': 'Cannot delete this address because it is being used in an existing order. Please contact support if you need to remove it.',
                 'error': 'protected_foreign_key'
             }, status=status.HTTP_400_BAD_REQUEST)
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -141,7 +131,6 @@ def set_default_address(request, address_id):
             'success': False,
             'message': str(e)
         }, status=status.HTTP_400_BAD_REQUEST)
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

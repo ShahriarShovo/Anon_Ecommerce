@@ -20,7 +20,6 @@
 
 # User = get_user_model()
 
-
 # class NotificationViewSet(viewsets.ModelViewSet):
 #     """ViewSet for managing notifications"""
 #     serializer_class = NotificationSerializer
@@ -153,7 +152,6 @@
 #         else:
 #             ip = request.META.get('REMOTE_ADDR')
 #         return ip
-
 
 # class NotificationPublicView:
 #     """Public view for notification display"""

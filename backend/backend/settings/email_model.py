@@ -118,7 +118,6 @@ class EmailSettings(models.Model):
         self.last_tested = timezone.now()
         self.save(update_fields=['test_status', 'test_message', 'last_tested'])
 
-
 class EmailTemplate(models.Model):
     """
     Model to store email templates
@@ -196,7 +195,6 @@ class EmailTemplate(models.Model):
             'text': text_content,
             'subject': self.subject
         }
-
 
 class EmailLog(models.Model):
     """

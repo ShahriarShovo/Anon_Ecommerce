@@ -70,7 +70,7 @@ def send_message(token, conversation_id, message):
     
     response = requests.post(url, json=data, headers=headers)
     if response.status_code == 201:
-        print(f"✅ Message sent: {message}")
+
         return True
     else:
         print(f"❌ Failed to send message: {response.text}")
@@ -85,7 +85,7 @@ def get_messages(token, conversation_id):
     response = requests.get(url, headers=headers, params=params)
     if response.status_code == 200:
         messages = response.json()
-        print(f"📨 Messages in conversation {conversation_id}:")
+
         for msg in messages:
             sender = msg.get('sender_name') or msg.get('sender_email', 'Unknown')
             print(f"  {sender}: {msg.get('content', 'N/A')} ({msg.get('created_at', 'N/A')})")

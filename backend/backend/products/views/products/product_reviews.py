@@ -7,7 +7,6 @@ from django.db.models import Avg, Count
 
 from products.models import Product, ProductReview
 
-
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_product_reviews(request, slug):
@@ -62,7 +61,6 @@ def get_product_reviews(request, slug):
             'success': False,
             'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])  # Only authenticated users can create reviews

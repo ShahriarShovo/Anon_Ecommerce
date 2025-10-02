@@ -142,8 +142,24 @@ class Product(models.Model):
     
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.title)
+            self.slug = self._generate_unique_slug()
         super().save(*args, **kwargs)
+    
+    def _generate_unique_slug(self):
+        """Generate a unique slug for the product"""
+        base_slug = slugify(self.title)
+        slug = base_slug
+        print(f"Generating slug for product: '{self.title}' -> base_slug: '{base_slug}'")
+        
+        # Ensure slug is unique by checking database
+        counter = 1
+        while Product.objects.filter(slug=slug).exists():
+            slug = f"{base_slug}-{counter}"
+            print(f"Slug collision, trying: '{slug}'")
+            counter += 1
+        
+        print(f"Final slug: '{slug}'")
+        return slug
     
     def __str__(self):
         return self.title

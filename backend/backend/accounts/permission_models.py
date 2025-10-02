@@ -3,7 +3,6 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
-
 class Permission(models.Model):
     """System permissions for role-based access control"""
     name = models.CharField(max_length=100, unique=True)
@@ -20,7 +19,6 @@ class Permission(models.Model):
     def __str__(self):
         return self.name
 
-
 class Role(models.Model):
     """User roles for permission grouping"""
     name = models.CharField(max_length=100, unique=True)
@@ -36,7 +34,6 @@ class Role(models.Model):
     def __str__(self):
         return self.name
 
-
 class RolePermission(models.Model):
     """Many-to-many relationship between roles and permissions"""
     role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name='role_permissions')
@@ -49,7 +46,6 @@ class RolePermission(models.Model):
 
     def __str__(self):
         return f"{self.role.name} - {self.permission.name}"
-
 
 class UserRole(models.Model):
     """Many-to-many relationship between users and roles"""
@@ -64,7 +60,6 @@ class UserRole(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.role.name}"
-
 
 class UserPermission(models.Model):
     """Direct permission assignment to users (bypassing roles)"""

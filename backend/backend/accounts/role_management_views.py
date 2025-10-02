@@ -6,9 +6,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
 from .role_management_serializers import AdminStaffUserSerializer, SetUserRoleSerializer, CreateAdminUserSerializer
 
-
 User = get_user_model()
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
@@ -18,7 +16,6 @@ def list_admins_and_staff(request):
     users = users.distinct().order_by('-date_joined')
     serializer = AdminStaffUserSerializer(users, many=True)
     return Response({'success': True, 'data': serializer.data}, status=status.HTTP_200_OK)
-
 
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated, IsAdminUser])
@@ -47,7 +44,6 @@ def set_user_role(request, user_id):
         'message': 'User role updated successfully',
         'data': AdminStaffUserSerializer(user).data
     }, status=status.HTTP_200_OK)
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
@@ -96,7 +92,6 @@ def create_admin_user(request):
         'errors': serializer.errors
     }, status=status.HTTP_400_BAD_REQUEST)
 
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def check_email_exists(request):
@@ -111,5 +106,4 @@ def check_email_exists(request):
         'exists': exists,
         'message': 'Email already exists' if exists else 'Email is available'
     }, status=status.HTTP_200_OK)
-
 

@@ -11,7 +11,6 @@ from .footer_settings_serializers import (
     SocialMediaLinkSerializer
 )
 
-
 class FooterSettingsListCreateView(generics.ListCreateAPIView):
     """
     List all footer settings or create a new one
@@ -41,7 +40,6 @@ class FooterSettingsListCreateView(generics.ListCreateAPIView):
             'message': 'Failed to create footer settings',
             'errors': serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
-
 
 class FooterSettingsDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
@@ -80,7 +78,6 @@ class FooterSettingsDetailView(generics.RetrieveUpdateDestroyAPIView):
             'message': 'Footer settings deleted successfully'
         }, status=status.HTTP_204_NO_CONTENT)
 
-
 class SocialMediaLinkListCreateView(generics.ListCreateAPIView):
     """
     List social media links for a footer setting or create new ones
@@ -112,7 +109,6 @@ class SocialMediaLinkListCreateView(generics.ListCreateAPIView):
             'errors': serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
 
-
 class SocialMediaLinkDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
     Retrieve, update or delete a social media link
@@ -123,7 +119,6 @@ class SocialMediaLinkDetailView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         footer_setting_id = self.kwargs.get('footer_setting_id')
         return SocialMediaLink.objects.filter(footer_setting_id=footer_setting_id)
-
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -160,7 +155,6 @@ def get_active_footer_settings(request):
             'message': 'Failed to fetch footer settings',
             'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])

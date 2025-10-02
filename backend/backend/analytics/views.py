@@ -12,7 +12,6 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 import io
 
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def sales_analytics(request):
@@ -119,7 +118,6 @@ def sales_analytics(request):
             'message': f'Failed to fetch sales analytics: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def sales_trends(request):
@@ -179,7 +177,6 @@ def sales_trends(request):
             'success': False,
             'message': f'Failed to fetch sales trends: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
@@ -275,8 +272,8 @@ def generate_excel_report(request):
                 
                 ws.cell(row=row, column=1, value=date.strftime('%Y-%m-%d')).border = border
                 ws.cell(row=row, column=2, value=data['orders']).border = border
-                ws.cell(row=row, column=3, value=f"${data['total_amount']:.2f}").border = border
-                ws.cell(row=row, column=4, value=f"${avg_order_value:.2f}").border = border
+                ws.cell(row=row, column=3, value=f"৳{data['total_amount']:.2f}").border = border
+                ws.cell(row=row, column=4, value=f"৳{avg_order_value:.2f}").border = border
                 ws.cell(row=row, column=5, value=status_summary).border = border
                 row += 1
             
@@ -287,8 +284,8 @@ def generate_excel_report(request):
             
             ws.cell(row=row, column=1, value="TOTAL").font = Font(bold=True)
             ws.cell(row=row, column=2, value=total_orders).font = Font(bold=True)
-            ws.cell(row=row, column=3, value=f"${total_amount:.2f}").font = Font(bold=True)
-            ws.cell(row=row, column=4, value=f"${avg_order_value:.2f}").font = Font(bold=True)
+            ws.cell(row=row, column=3, value=f"৳{total_amount:.2f}").font = Font(bold=True)
+            ws.cell(row=row, column=4, value=f"৳{avg_order_value:.2f}").font = Font(bold=True)
             ws.cell(row=row, column=5, value="").font = Font(bold=True)
             
         elif report_type == 'orders':
@@ -321,7 +318,7 @@ def generate_excel_report(request):
                 ws.cell(row=row, column=2, value=order.user.email).border = border
                 ws.cell(row=row, column=3, value=order.created_at.strftime('%Y-%m-%d %H:%M')).border = border
                 ws.cell(row=row, column=4, value=order.status).border = border
-                ws.cell(row=row, column=5, value=f"${order.total_amount:.2f}").border = border
+                ws.cell(row=row, column=5, value=f"৳{order.total_amount:.2f}").border = border
                 ws.cell(row=row, column=6, value=payment_status).border = border
                 ws.cell(row=row, column=7, value=items).border = border
                 row += 1
@@ -359,7 +356,7 @@ def generate_excel_report(request):
                 ws.cell(row=row, column=5, value=user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else 'Never').border = border
                 ws.cell(row=row, column=6, value='Active' if user.is_active else 'Inactive').border = border
                 ws.cell(row=row, column=7, value=orders_count).border = border
-                ws.cell(row=row, column=8, value=f"${total_spent:.2f}").border = border
+                ws.cell(row=row, column=8, value=f"৳{total_spent:.2f}").border = border
                 row += 1
                 
         elif report_type == 'products':
@@ -388,7 +385,7 @@ def generate_excel_report(request):
                 orders_count = product.order_items.count()
                 total_sold = sum(item.quantity for item in product.order_items.all())
                 
-                price_display = f"${product.price:.2f}" if product.price is not None else "N/A"
+                price_display = f"৳{product.price:.2f}" if product.price is not None else "N/A"
                 created_date = product.created_at.strftime('%Y-%m-%d') if product.created_at else "N/A"
                 
                 ws.cell(row=row, column=1, value=product.id).border = border

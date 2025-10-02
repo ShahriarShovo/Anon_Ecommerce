@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from ...models.contact.contact import Contact
 
-
 class ContactSerializer(serializers.ModelSerializer):
     """
     Serializer for Contact model
@@ -17,7 +16,6 @@ class ContactSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'is_read', 'is_replied', 'created_at', 'updated_at']
-
 
 class ContactCreateSerializer(serializers.ModelSerializer):
     """
@@ -44,7 +42,6 @@ class ContactCreateSerializer(serializers.ModelSerializer):
         if not value or len(value.strip()) < 10:
             raise serializers.ValidationError("Message must be at least 10 characters long.")
         return value.strip()
-
 
 class ContactUpdateSerializer(serializers.ModelSerializer):
     """
