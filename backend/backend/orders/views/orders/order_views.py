@@ -1,8 +1,14 @@
 from rest_framework import status, generics, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
 from django.shortcuts import get_object_or_404
 from django.db import transaction
+
+class OrderPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 50
 
 from orders.models.orders.order import Order
 from orders.models.orders.order_item import OrderItem
@@ -253,6 +259,7 @@ class DeliveredOrderListView(generics.ListAPIView):
     """
     serializer_class = OrderSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = OrderPagination
     
     def get_queryset(self):
         return Order.objects.filter(
@@ -266,6 +273,7 @@ class CancelledRefundedOrderListView(generics.ListAPIView):
     """
     serializer_class = OrderSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = OrderPagination
     
     def get_queryset(self):
         return Order.objects.filter(

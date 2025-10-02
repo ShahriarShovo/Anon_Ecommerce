@@ -10,6 +10,11 @@ from .views.products.purchase_verification import check_purchase_eligibility, ge
 from .views.search.search import SearchViewSet
 from .views.filters.price_filter import PriceFilterViewSet
 from .views.pagination.home_pagination import HomePaginationViewSet
+from .views.search.product_search_views import (
+    ProductSearchView,
+    search_suggestions,
+    filter_options
+)
 
 # Create router for ViewSets
 router = DefaultRouter()
@@ -35,4 +40,8 @@ urlpatterns = [
     # Purchase Verification API
     path('purchase-verification/<slug:slug>/', check_purchase_eligibility, name='check-purchase-eligibility'),
     path('purchase-history/<slug:slug>/', get_user_purchase_history, name='user-purchase-history'),
+    # Advanced Search API
+    path('search/', ProductSearchView.as_view(), name='product_search'),
+    path('search/suggestions/', search_suggestions, name='search_suggestions'),
+    path('search/filter-options/', filter_options, name='filter_options'),
 ]
