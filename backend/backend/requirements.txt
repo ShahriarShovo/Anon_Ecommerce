@@ -47,7 +47,6 @@ sqlparse==0.5.3
 tinycss2==1.4.0
 tinyhtml5==2.0.0
 Twisted==24.3.0
-twisted-iocpsupport==1.0.4
 txaio==25.6.1
 typing_extensions==4.14.1
 tzdata==2025.2
