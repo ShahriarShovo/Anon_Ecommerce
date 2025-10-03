@@ -13,20 +13,21 @@ from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
 from channels.middleware import BaseMiddleware
 from channels.db import database_sync_to_async
-from django.contrib.auth.models import AnonymousUser
-from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Main_Application.settings')
 
-User = get_user_model()
+
 
 class JWTAuthMiddleware(BaseMiddleware):
     """
     Custom middleware to authenticate WebSocket connections using JWT tokens
     """
     async def __call__(self, scope, receive, send):
+        from django.contrib.auth.models import AnonymousUser
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
         # Get token from query parameters
         query_string = scope.get('query_string', b'').decode()
         token = None
