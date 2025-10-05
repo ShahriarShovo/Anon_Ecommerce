@@ -7,6 +7,7 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.utils import timezone
 from accounts.models import User
+from django.conf import settings
 
 def generate_reset_token():
     """Generate a secure random token for password reset"""
@@ -14,7 +15,8 @@ def generate_reset_token():
 
 def create_reset_link(token):
     """Create the password reset link"""
-    return f"http://localhost:3000/reset-password?token={token}"
+    frontend_url = getattr(settings, 'FRONTEND_BASE_URL')
+    return f"{frontend_url}/reset-password?token={token}"
 
 def send_password_reset_email(user_email):
     """

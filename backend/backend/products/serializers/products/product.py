@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from products.models import Product, ProductVariant, ProductImage, VariantOption
+from django.conf import settings
+
 
 class ProductImageSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
@@ -13,7 +15,7 @@ class ProductImageSerializer(serializers.ModelSerializer):
         if obj.image_url:
             # Return full URL if it's a relative path
             if obj.image_url.startswith('/'):
-                return f"http://127.0.0.1:8000{obj.image_url}"
+                return f"{settings.BACKEND_BASE_URL}{obj.image_url}"
             return obj.image_url
         return None
     

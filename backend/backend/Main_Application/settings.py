@@ -1,6 +1,7 @@
 
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -8,15 +9,23 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
 
+# Load .env file
+load_dotenv(os.path.join(BASE_DIR, '.env'))
+
+BACKEND_BASE_URL = os.environ.get("BACKEND_BASE_URL")
+FRONTEND_BASE_URL = os.environ.get("FRONTEND_BASE_URL")
+
+
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-xb2ttnqj903q0j1no==icz5$h0d&hs06iv9c#tslfia)ehwnnv'
+SECRET_KEY = os.environ.get("SECRET_KEY")
+DEBUG = os.environ.get("DEBUG", "True").lower() == "true"
+# DEBUG = True
 
-DEBUG = True
+# ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
 
-ALLOWED_HOSTS = ['*', ".onrender.com"]
 
 # Application definition
-
 INSTALLED_APPS = [
     "daphne",
     'django.contrib.admin',
@@ -164,17 +173,29 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
 }
 
+
+
 # CORS Settings
-CORS_ALLOWED_ORIGINS = [
+
+# 5) CORS
+# Panel/env এ FRONTEND_ORIGINS="http://localhost:3000,https://your-frontend" এর মত দিয়ে দিন
+_frontend_origins = os.environ.get("CORS_ALLOWED_ORIGINS", "")
+CORS_ALLOWED_ORIGINS = [o.strip() for o in _frontend_origins.split(",") if o.strip()] or [
     "http://localhost:3000",
-    "http://localhost:3001",
     "http://127.0.0.1:3000",
-    "http://127.0.0.1:3001",
-    "http://localhost:8000",
-    "http://127.0.0.1:8000",
-    "http://localhost:5500",
-    "http://127.0.0.1:5500",
 ]
+
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:3000",
+#     "http://localhost:3001",
+#     "http://127.0.0.1:3000",
+#     "http://127.0.0.1:3001",
+#     "http://localhost:8000",
+#     "http://127.0.0.1:8000",
+#     "http://localhost:5500",
+#     "http://127.0.0.1:5500",
+#     "https://handled-insights-journalist-pharmacy.trycloudflare.com",
+# ]
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -190,11 +211,11 @@ CORS_EXPOSE_HEADERS = [
 # Allow all origins in development
 if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = True
-    CORS_ALLOW_CREDENTIALS = True
-    CORS_ALLOWED_ORIGINS = [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ]
+    # CORS_ALLOW_CREDENTIALS = True
+    # CORS_ALLOWED_ORIGINS = [
+    #     "http://localhost:3000",
+    #     "http://127.0.0.1:3000",
+    # ]
 
 # Session Settings
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 30  # 30 days
@@ -208,6 +229,7 @@ SESSION_COOKIE_PATH = '/'
 
 # Media files settings
 MEDIA_URL = '/media/'
+# MEDIA_URL = f"{BACKEND_BASE_URL}/media/"
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # Swagger Settings

@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from django.conf import settings
 
 from products.models import Product, ProductVariant, ProductImage
 from products.serializers import (
@@ -613,7 +614,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                     image_url = product_data['primary_image']['image_url']
                     if not image_url.startswith('http'):
                         # Add domain for relative URLs
-                        product_data['primary_image']['image_url'] = f"http://127.0.0.1:8000{image_url}"
+                        product_data['primary_image']['image_url'] = f"{settings.BACKEND_BASE_URL}{image_url}"
             
             return Response({
                 'products': products_data,

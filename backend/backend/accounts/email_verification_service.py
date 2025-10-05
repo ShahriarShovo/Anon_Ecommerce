@@ -12,6 +12,8 @@ from django.contrib.sites.shortcuts import get_current_site
 from accounts.models import User
 from settings.email_model import EmailSettings
 import logging
+from django.conf import settings
+
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +60,8 @@ class EmailVerificationService:
             domain = current_site.domain
             
             # Create verification URL - redirect to frontend success page
-            verification_url = f"http://localhost:3000/email-verified?token={token}"
+            frontend_url = getattr(settings, 'FRONTEND_BASE_URL')
+            verification_url = f"{frontend_url}/email-verified?token={token}"
             return verification_url
         except Exception as e:
             logger.error(f"Error creating verification link: {str(e)}")

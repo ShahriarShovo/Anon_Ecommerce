@@ -3,6 +3,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
+from django.conf import settings
 
 from products.models import Product, ProductImage, ProductVariant
 from products.serializers import ProductDetailSerializer
@@ -32,7 +33,7 @@ def get_single_product(request, slug):
         if product_data.get('images'):
             for image in product_data['images']:
                 if image.get('image_url') and image['image_url'].startswith('/'):
-                    image['image_url'] = f"http://127.0.0.1:8000{image['image_url']}"
+                    image['image_url'] = f"{settings.BACKEND_BASE_URL}{image['image_url']}"
         
         # Add additional fields for backward compatibility
         product_data['primary_image'] = product_data['images'][0] if product_data['images'] else None

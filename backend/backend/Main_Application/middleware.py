@@ -53,7 +53,7 @@ class CORSHeadersMiddleware(MiddlewareMixin):
         # Add CORS headers for credentials
         response['Access-Control-Allow-Credentials'] = 'true'
         origin = request.META.get('HTTP_ORIGIN')
-        if origin in ['http://localhost:3000', 'http://127.0.0.1:3000']:
+        if origin in settings.CORS_ALLOWED_ORIGINS:
             response['Access-Control-Allow-Origin'] = origin
         else:
             response['Access-Control-Allow-Origin'] = '*'

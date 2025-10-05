@@ -3,6 +3,8 @@ from ...models.orders.order import Order
 from ...models.orders.order_item import OrderItem
 from ...models.orders.address import Address
 from ...models.payments.payment import Payment
+from django.conf import settings
+
 
 class OrderItemTrackingSerializer(serializers.ModelSerializer):
     """
@@ -28,7 +30,7 @@ class OrderItemTrackingSerializer(serializers.ModelSerializer):
                     image_url = primary_image.image.url
                     # Convert relative URL to absolute URL
                     if image_url.startswith('/media/'):
-                        image_url = f"http://localhost:8000{image_url}"
+                        image_url = f"{settings.BACKEND_BASE_URL}{image_url}"
                     
                     return image_url
                 
@@ -39,7 +41,7 @@ class OrderItemTrackingSerializer(serializers.ModelSerializer):
                         image_url = first_image.image.url
                         # Convert relative URL to absolute URL
                         if image_url.startswith('/media/'):
-                            image_url = f"http://localhost:8000{image_url}"
+                            image_url = f"{settings.BACKEND_BASE_URL}{image_url}"
                         
                         return image_url
 

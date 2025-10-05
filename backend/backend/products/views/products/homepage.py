@@ -3,7 +3,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
-
+from django.conf import settings
 from products.models import Product, ProductImage, ProductReview
 from products.serializers import ProductListSerializer
 
@@ -37,7 +37,7 @@ def homepage_products(request):
                     image_url = primary_image.image_url
                 else:
                     # Add domain for relative URLs
-                    image_url = f"http://127.0.0.1:8000{primary_image.image_url}"
+                    image_url = f"{settings.BACKEND_BASE_URL}{primary_image.image_url}"
             
             # Calculate average rating from reviews
             approved_reviews = product.reviews.filter(is_approved=True)

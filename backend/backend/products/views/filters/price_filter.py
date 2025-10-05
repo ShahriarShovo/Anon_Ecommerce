@@ -5,6 +5,7 @@ from django.db.models import Q, Min, Max, F
 from django.db.models.functions import Coalesce
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from django.conf import settings
 
 from products.models import Product
 from products.serializers import ProductListSerializer
@@ -151,7 +152,7 @@ class PriceFilterViewSet(viewsets.ViewSet):
         for product_data in serializer.data:
             if product_data.get('primary_image') and product_data['primary_image'].get('image_url'):
                 if not product_data['primary_image']['image_url'].startswith('http'):
-                    product_data['primary_image']['image_url'] = f"http://127.0.0.1:8000{product_data['primary_image']['image_url']}"
+                    product_data['primary_image']['image_url'] = f"{settings.BACKEND_BASE_URL}{product_data['primary_image']['image_url']}"
         
         # Prepare response data
         response_data = {
